@@ -30,3 +30,9 @@
 *.exe
 *.out
 *.app
+
+# Folders and settings
+/Release
+/.settings
+/.cproject
+/.project
