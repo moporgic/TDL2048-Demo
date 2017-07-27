@@ -23,6 +23,26 @@
 #include <cmath>
 
 /**
+ * output stream wrapper
+ */
+class output {
+private:
+	std::ostream& out;
+	bool enable;
+public:
+	output(std::ostream& out, const bool& en = true) : out(out), enable(en) {}
+	template<typename type>
+	inline output& operator <<(const type& v) {
+		if (enable) out << v;
+		return *this;
+	}
+	inline output& operator <<(std::ostream& (*pf)(std::ostream&)) {
+		if (enable) out << pf;
+		return *this;
+	}
+} info(std::cout, true), error(std::cerr, true), debug(std::cout, false);
+
+/**
  * The simplest bitboard implementation for 2048 board
  */
 class board {
@@ -243,7 +263,7 @@ public:
 		name.resize(len);
 		in.read(&name[0], len);
 		if (name != w.name()) {
-			std::cerr << "unexpected feature: " << name << " (" << name << " is expected)" << std::endl;
+			error << "unexpected feature: " << name << " (" << name << " is expected)" << std::endl;
 			std::exit(1);
 		}
 		float* weight = w.weight;
@@ -252,7 +272,7 @@ public:
 		if (size != w.size()) std::exit(1);
 		in.read(reinterpret_cast<char*>(weight), sizeof(float) * size);
 		if (!in) {
-			std::cerr << "unexpected end of binary" << std::endl;
+			error << "unexpected end of binary" << std::endl;
 			std::exit(1);
 		}
 		return in;
@@ -271,7 +291,7 @@ protected:
 			if (total > limit) throw std::bad_alloc();
 			return new float[num]();
 		} catch (std::bad_alloc&) {
-			std::cerr << "memory limit exceeded" << std::endl;
+			error << "memory limit exceeded" << std::endl;
 			std::exit(-1);
 		}
 		return NULL;
@@ -305,27 +325,27 @@ public:
 			isomorphic[i].init(isopatt);
 		}
 
-		std::cout << name() << " initialized, size = " << length;
+		info << name() << " initialized, size = " << length;
 		if (length >= (1 << 30)) {
-			std::cout << " (" << (length >> 30) << "G)";
+			info << " (" << (length >> 30) << "G)";
 		} else if (length >= (1 << 20)) {
-			std::cout << " (" << (length >> 20) << "M)";
+			info << " (" << (length >> 20) << "M)";
 		} else if (length >= (1 << 10)) {
-			std::cout << " (" << (length >> 10) << "K)";
+			info << " (" << (length >> 10) << "K)";
 		}
-		std::cout << std::endl;
+		info << std::endl;
 	}
 	virtual ~pattern() {}
 
 	virtual float estimate(const board& b) {
-//		std::cout << name() << " estimate: " << std::endl << b;
+		debug << name() << " estimate: " << std::endl << b;
 		float value = 0;
 		for (int i = 0; i < 8; i++)
 			value += (operator [](isomorphic[i][b]));
 		return value;
 	}
 	virtual float update(const board& b, const float& v) {
-//		std::cout << name() << " update: " << v << std::endl;
+		debug << name() << " update: " << v << std::endl;
 		float value = 0;
 		for (int i = 0; i < 8; i++)
 			value += (operator [](isomorphic[i][b]) += v);
@@ -376,14 +396,14 @@ public:
 	float estimated_value() const { return value; }
 
 	state& assign(const board& b) {
-//		std::cout << "assign " << std::endl << before;
+		debug << "assign " << std::endl << before;
 		after = before = b;
 		score = after.move(opcode);
 		return *this;
 	}
 
 	state& estimate() {
-//		std::cout << "estimate " << std::endl << before;
+		debug << "estimate " << std::endl << before;
 		if (score != -1) {
 			value = score;
 			for (size_t i = 0; i < feature::list().size(); i++)
@@ -395,7 +415,7 @@ public:
 	}
 
 	state& update(const float& exact, const float& alpha = 0.001) {
-//		std::cout << "update " << exact << " (" << alpha << ")" << std::endl;
+		debug << "update " << exact << " (" << alpha << ")" << std::endl;
 		float error = exact - (value - score);
 		float update = alpha * error;
 		value = score;
@@ -406,7 +426,7 @@ public:
 
 	bool is_valid() const {
 		if (std::isnan(value)) {
-			std::cerr << "numeric exception" << std::endl;
+			error << "numeric exception" << std::endl;
 			std::exit(1);
 		}
 		return score != -1;
@@ -420,9 +440,9 @@ public:
     friend std::ostream& operator <<(std::ostream& out, const state& st) {
 		out << "moving " << st.name() << ", reward = " << st.score;
 		if (st.is_valid()) {
-			std::cout << ", value = " << st.value << std::endl << st.after;
+			info << ", value = " << st.value << std::endl << st.after;
 		} else {
-			std::cout << " (invalid)" << std::endl;
+			info << " (invalid)" << std::endl;
 		}
 		return out;
 	}
@@ -435,6 +455,7 @@ private:
 };
 
 int main(int argc, const char* argv[]) {
+	info << "TDL2048-Demo" << std::endl;
 
 	// initialize the learning parameters
 	float alpha = 0.001;
@@ -443,9 +464,9 @@ int main(int argc, const char* argv[]) {
     __asm__ __volatile__ ("rdtsc" : "=a" (seed));
 	std::srand(seed);
 
-	std::cout << "alpha = " << alpha << std::endl;
-	std::cout << "total = " << total << std::endl;
-	std::cout << "seed = " << seed << std::endl;
+	info << "alpha = " << alpha << std::endl;
+	info << "total = " << total << std::endl;
+	info << "seed = " << seed << std::endl;
 
 	// initialize the patterns
 	feature::list().push_back(new pattern<4>(0, 1, 2, 3));
@@ -462,13 +483,13 @@ int main(int argc, const char* argv[]) {
 		size_t size;
 		in.read(reinterpret_cast<char*>(&size), sizeof(size));
 		if (size != feature::list().size()) {
-			std::cerr << "unexpected feature count: " << size
+			error << "unexpected feature count: " << size
 					<< " (" << feature::list().size() << " is expected)" << std::endl;
 			std::exit(1);
 		}
 		for (size_t i = 0; i < size; i++) {
 			in >> *(feature::list()[i]);
-			std::cout << feature::list()[i]->name() << " is loaded from " << load << std::endl;
+			info << feature::list()[i]->name() << " is loaded from " << load << std::endl;
 		}
 		in.close();
 	}
@@ -486,7 +507,7 @@ int main(int argc, const char* argv[]) {
 		b.init();
 		state after[4] = { 0 /* up */, 1 /* right */, 2 /* down */, 3 /* left */ };
 		while (true) {
-//			std::cout << "beforestate" << std::endl << b;
+			debug << "beforestate" << std::endl << b;
 
 			// try to find a best move
 			state* best = after;
@@ -495,17 +516,17 @@ int main(int argc, const char* argv[]) {
 				move->estimate();
 				if (move->estimated_value() > best->estimated_value())
 					best = move;
-//				std::cout << "try " << *move;
+				debug << "try " << *move;
 			}
 
 			if (best->is_valid()) {
-//				std::cout << "best " << *best;
+				debug << "best " << *best;
 				path.push_back(*best);
 				score += best->merge_score();
 				b = best->after_state();
 				b.popup();
 			} else {
-//				std::cout << "gameover, ";
+				debug << "gameover, ";
 				break;
 			}
 		}
@@ -536,16 +557,16 @@ int main(int argc, const char* argv[]) {
 				stat[maxtile[i]]++;
 			}
 			float mean = sum / 1000;
-			std::cout << n;
-			std::cout << "\t" "mean = " << mean;
-			std::cout << "\t" "max = " << max;
-			std::cout << std::endl;
+			info << n;
+			info << "\t" "mean = " << mean;
+			info << "\t" "max = " << max;
+			info << std::endl;
 
 			int t = 1;
 			while (stat[t] == 0) t++;
 			for (int c = 0; c < 1000; t++) {
 				c += stat[t];
-				std::cout << "\t" << ((1 << t) & -2u) << "\t" << (stat[t] * 0.1) << "%\t(" << (c * 0.1) << "%)" << std::endl;
+				info << "\t" << ((1 << t) & -2u) << "\t" << (stat[t] * 0.1) << "%\t(" << (c * 0.1) << "%)" << std::endl;
 			}
 
 		}
@@ -559,7 +580,7 @@ int main(int argc, const char* argv[]) {
 		out.write(reinterpret_cast<char*>(&size), sizeof(size));
 		for (size_t i = 0; i < size; i++) {
 			out << *(feature::list()[i]);
-			std::cout << feature::list()[i]->name() << " is saved to " << save << std::endl;
+			info << feature::list()[i]->name() << " is saved to " << save << std::endl;
 		}
 		out.flush();
 		out.close();
