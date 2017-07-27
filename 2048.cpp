@@ -116,16 +116,13 @@ private:
 			return score;
 		}
 
-		struct init_t {
-			init_t(lookup* c) {
-				for (size_t i = 0; i < 65536; i++)
-					c[i].init(i);
-			}
-		};
+		lookup() {
+			static int row = 0;
+			init(row++);
+		}
 
 		static const lookup& find(const int& row) {
-			static lookup cache[65536];
-			static init_t init(cache);
+			static const lookup cache[65536];
 			return cache[row];
 		}
 	};
