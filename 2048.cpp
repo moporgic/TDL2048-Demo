@@ -263,13 +263,17 @@ public:
 		name.resize(len);
 		in.read(&name[0], len);
 		if (name != w.name()) {
-			error << "unexpected feature: " << name << " (" << name << " is expected)" << std::endl;
+			error << "unexpected feature: " << name << " (" << w.name() << " is expected)" << std::endl;
 			std::exit(1);
 		}
 		float* weight = w.weight;
 		size_t size;
 		in.read(reinterpret_cast<char*>(&size), sizeof(size_t));
-		if (size != w.size()) std::exit(1);
+		if (size != w.size()) {
+			error << "unexpected feature size " << size << "for " << w.name();
+			error << " (" << w.size() << " is expected)" << std::endl;
+			std::exit(1);
+		}
 		in.read(reinterpret_cast<char*>(weight), sizeof(float) * size);
 		if (!in) {
 			error << "unexpected end of binary" << std::endl;
@@ -468,7 +472,26 @@ class learning {
 public:
 	learning() {}
 	~learning() {}
-	void add_feature(feature* feat) { feats.push_back(feat); }
+
+	/**
+	 * add a feature into n-tuple networks
+	 *
+	 * note that feats is std::vector<feature*>,
+	 * therefore you need to keep all the instances of features
+	 */
+	void add_feature(feature* feat) {
+		feats.push_back(feat);
+	}
+
+	/**
+	 * find a feature by its name, return nullptr if not found
+	 */
+	feature* find_feature(const std::string& name) {
+		for (size_t i = 0; i < feats.size(); i++)
+			if (feats[i]->name() == name)
+				return feats[i];
+		return NULL;
+	}
 
 	/**
 	 * accumulate the total value of given state
@@ -530,8 +553,8 @@ public:
 	 *  (initial) s0 --(a0,r0)--> s0' --(popup)--> s1 --(a1,r1)--> s1' --(popup)--> s2 (game over)
 	 *  where sx is before state, sx' is after state
 	 * its path would be
-	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,-,-,-) }
-	 *  see the constructor of state for more details
+	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,s2,x,-1) }
+	 *  where (x,x,x,x) means (before state, after state, action, reward)
 	 */
 	void update_path(std::vector<state>& path, const float& alpha = 0.001) {
 		float exact = 0;
@@ -549,8 +572,9 @@ public:
 		int ep = (n - 1) % 1000;
 		scores[ep] = score;
 		maxtile[ep] = 0;
-		for (int i = 0; i < 16; i++)
+		for (int i = 0; i < 16; i++) {
 			maxtile[ep] = std::max(maxtile[ep], b.at(i));
+		}
 
 		// show the training process
 		if (n % 1000 == 0) {
@@ -574,6 +598,10 @@ public:
 		}
 	}
 
+	/**
+	 * load the weight table from path
+	 * you need to define all the features (add_feature(...)) before call this function
+	 */
 	void load(const std::string& path) {
 		std::ifstream in;
 		in.open(path.c_str(), std::ios::in | std::ios::binary);
@@ -592,6 +620,9 @@ public:
 		}
 	}
 
+	/**
+	 * save the weight table to path
+	 */
 	void save(const std::string& path) {
 		std::ofstream out;
 		out.open(path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
@@ -626,7 +657,7 @@ int main(int argc, const char* argv[]) {
 	info << "seed = " << seed << std::endl;
 	std::srand(seed);
 
-	// initialize the patterns
+	// initialize the features
 	tdl.add_feature(new pattern<6>(0, 1, 2, 3, 4, 5));
 	tdl.add_feature(new pattern<6>(4, 5, 6, 7, 8, 9));
 	tdl.add_feature(new pattern<6>(0, 1, 2, 4, 5, 6));
