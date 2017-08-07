@@ -10,3 +10,5 @@ References:
 Computational Intelligence and Games (CIG), 2014 IEEE Conference on. IEEE, 2014.
 [2] Wu, I-Chen, et al. "Multi-stage temporal difference learning for 2048."
 Technologies and Applications of Artificial Intelligence. Springer International Publishing, 2014. 366-378.
+[3] Oka, Kazuto, and Kiminori Matsuzaki. "Systematic selection of n-tuple networks for 2048."
+International Conference on Computers and Games. Springer International Publishing, 2016.
