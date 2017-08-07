@@ -424,10 +424,11 @@ public:
 		return (opcode >= 0 && opcode < 4) ? opname[opcode] : "none";
 	}
 
-	void assign(const board& b) {
+	bool assign(const board& b) {
 		debug << "assign " << std::endl << b;
 		after = before = b;
 		score = after.move(opcode);
+		return score != -1;
 	}
 
 	void set_before_state(const board& b) { before = b; }
@@ -505,8 +506,7 @@ public:
 		state after[4] = { 0, 1, 2, 3 }; // up, right, down, left
 		state* best = after;
 		for (state* move = after; move != after + 4; move++) {
-			move->assign(b);
-			if (move->reward() != -1) {
+			if (move->assign(b)) {
 				move->set_value(move->reward() + estimate(move->after_state()));
 				if (move->value() > best->value())
 					best = move;
