@@ -337,12 +337,13 @@ public:
 		}
 
 		info << name() << ", size = " << length;
-		if (length >= (1 << 30)) {
-			info << " (" << (length >> 30) << "G)";
-		} else if (length >= (1 << 20)) {
-			info << " (" << (length >> 20) << "M)";
-		} else if (length >= (1 << 10)) {
-			info << " (" << (length >> 10) << "K)";
+		size_t usage = length * sizeof(float);
+		if (usage >= (1 << 30)) {
+			info << " (" << (usage >> 30) << "G)";
+		} else if (usage >= (1 << 20)) {
+			info << " (" << (usage >> 20) << "M)";
+		} else if (usage >= (1 << 10)) {
+			info << " (" << (usage >> 10) << "K)";
 		}
 		info << std::endl;
 	}
