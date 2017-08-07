@@ -488,7 +488,7 @@ public:
 		float value = 0;
 		for (size_t i = 0; i < feats.size(); i++)
 			value += feats[i]->update(b, update);
-		return 0;
+		return value;
 	}
 
 	/**
@@ -536,8 +536,8 @@ public:
 		float exact = 0;
 		for (path.pop_back(); path.size(); path.pop_back()) {
 			state& move = path.back();
-			float error = exact - estimate(move.after_state());
-			exact += move.reward() + update(move.after_state(), alpha * error);
+			float error = exact - (move.value() - move.reward());
+			exact = move.reward() + update(move.after_state(), alpha * error);
 		}
 	}
 
@@ -635,7 +635,7 @@ int main(int argc, const char* argv[]) {
 	tdl.add_feature(new pattern<4>(1, 2, 5, 6));
 	tdl.add_feature(new pattern<4>(5, 6, 9,10));
 
-	// restore the model from the file if necessary
+	// restore the model from file
 	tdl.load("");
 
 	// train the model
@@ -659,7 +659,7 @@ int main(int argc, const char* argv[]) {
 				b.popup();
 			} else {
 				debug << "gameover, ";
-				path.push_back(state(b));
+				path.push_back(best);
 				break;
 			}
 		}
@@ -669,7 +669,7 @@ int main(int argc, const char* argv[]) {
 		path.clear();
 	}
 
-	// store the model into the file
+	// store the model into file
 	tdl.save("");
 
 	return 0;
