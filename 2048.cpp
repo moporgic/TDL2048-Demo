@@ -165,7 +165,7 @@ public:
 		rotate_left();
 		return score;
 	}
-	int move(const int& opcode) { // 0:up 1:right 2:down 3:left
+	int move(const int& opcode) {
 		switch (opcode) {
 		case 0: return move_up();
 		case 1: return move_right();
@@ -429,7 +429,7 @@ public:
 			error << "numeric exception" << std::endl;
 			std::exit(1);
 		}
-		return after != before && score != -1;
+		return after != before && opcode != -1 && score != -1;
 	}
 
     friend std::ostream& operator <<(std::ostream& out, const state& st) {
@@ -455,6 +455,9 @@ public:
 	~learning() { for (size_t i = 0; i < feats.size(); i++) delete feats[i]; }
 	void add_feature(feature* feat) { feats.push_back(feat); }
 
+	/**
+	 * accumulate the total value of given state
+	 */
 	float estimate(const board& b) {
 		debug << "estimate " << std::endl << b;
 		float value = 0;
@@ -463,6 +466,9 @@ public:
 		return value;
 	}
 
+	/**
+	 * update the value of given state and return its new value
+	 */
 	float update(const board& b, const float& update) {
 		debug << "update " << " (" << update << ")" << std::endl << b;
 		float value = 0;
@@ -471,6 +477,10 @@ public:
 		return 0;
 	}
 
+	/**
+	 * train the model by temporal difference learning
+	 * you may set alpha = 0 if you want to perform testing
+	 */
 	void learn(const float& alpha = 0.001, const size_t& total = 100000, const unsigned& seed = 0) {
 		std::srand(seed);
 
@@ -478,20 +488,19 @@ public:
 		path.reserve(20000);
 
 		for (size_t n = 1; n <= total; n++) {
+			int score = 0;
 
 			// play an episode
-			int score = 0;
 			board b;
 			b.init();
 			while (true) {
 				debug << "state" << std::endl << b;
-
 				state best = select_best_move(b);
 
 				if (best.is_valid()) {
 					debug << "best " << best;
-					path.push_back(best);
 					score += best.reward();
+					path.push_back(best);
 					b = best.after_state();
 					b.popup();
 				} else {
@@ -501,14 +510,26 @@ public:
 				}
 			}
 
-			update_backward(path, alpha);
+			update_episode(path, alpha);
 			update_statistics(n, b, score);
 			path.clear();
 		}
 	}
 
+	/**
+	 * select a best move of a before state b
+	 *
+	 * return should be a state whose
+	 *  before_state() is b
+	 *  after_state() is b's best successor (after state)
+	 *  action() is the best action
+	 *  reward() is the reward of performing action()
+	 *  value() is the estimated value of after_state()
+	 *
+	 * you may simply return state() if no valid move
+	 */
 	state select_best_move(const board& b) {
-		state after[4] = { 0 /* up */, 1 /* right */, 2 /* down */, 3 /* left */ };
+		state after[4] = { 0, 1, 2, 3 }; // up, right, down, left
 		state* best = after;
 		for (state* move = after; move != after + 4; move++) {
 			move->assign(b);
@@ -524,7 +545,21 @@ public:
 		return *best;
 	}
 
-	void update_backward(std::vector<state>& path, const float& alpha = 0.001) {
+	/**
+	 * update the tuple network by an episode
+	 *
+	 * path is the sequence of states in this episode,
+	 * the last entry in path (path.back()) is the final state
+	 *
+	 * for example, a 2048 games consists of
+	 *  (initial) s0 --(a0,r0)--> s0' --(popup)--> s1 --(a1,r1)--> s1' --(popup)--> s2 (game over)
+	 *  where sx is before state, sx' is after state
+	 * its path would be
+	 *  path[0] == (s0,s0',a0,r0)
+	 *  path[1] == (s1,s1',a1,r1)
+	 *  path[2] == (s2,-,-,-)
+	 */
+	void update_episode(std::vector<state>& path, const float& alpha = 0.001) {
 		float exact = 0;
 		for (path.pop_back(); path.size(); path.pop_back()) {
 			state& move = path.back();
