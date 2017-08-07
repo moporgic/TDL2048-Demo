@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <vector>
 #include <limits>
+#include <numeric>
 #include <cstdarg>
 #include <string>
 #include <sstream>
@@ -544,7 +545,7 @@ public:
 	/**
 	 * update the statistic, and display the status once in 1000 episodes
 	 */
-	void make_statistic(size_t n, const board& b, const int& score) {
+	void make_statistic(const size_t& n, const board& b, const int& score) {
 		int ep = (n - 1) % 1000;
 		scores[ep] = score;
 		maxtile[ep] = 0;
@@ -553,25 +554,22 @@ public:
 
 		// show the training process
 		if (n % 1000 == 0) {
-			float sum = 0;
-			int max = 0;
+			float sum = std::accumulate(scores, scores + 1000, 0);
+			int max = *std::max_element(scores, scores + 1000);
 			int stat[16] = { 0 };
-			for (int i = 0; i < 1000; i++) {
-				sum += scores[i];
-				max = std::max(max, scores[i]);
-				stat[maxtile[i]]++;
+			for (int i = 0; i < 16; i++) {
+				stat[i] = std::count(maxtile, maxtile + 1000, i);
 			}
 			float mean = sum / 1000;
 			info << n;
 			info << "\t" "mean = " << mean;
 			info << "\t" "max = " << max;
 			info << std::endl;
-
-			int t = 1;
-			while (stat[t] == 0) t++;
-			for (int c = 0; c < 1000; t++) {
-				c += stat[t];
-				info << "\t" << ((1 << t) & -2u) << "\t" << (stat[t] * 0.1) << "%\t(" << (c * 0.1) << "%)" << std::endl;
+			for (int t = 1, c = 0; c < 1000; c += stat[t++]) {
+				if (stat[t] == 0) continue;
+				int accu = std::accumulate(stat + t, stat + 16, 0);
+				info << "\t" << ((1 << t) & -2u) << "\t" << (stat[t] * 0.1) << "%";
+				info << "\t(" << (accu * 0.1) << "%)" << std::endl;
 			}
 		}
 	}
@@ -620,7 +618,7 @@ int main(int argc, const char* argv[]) {
 	learning tdl;
 
 	// initialize the learning parameters
-	float alpha = 0.001;
+	float alpha = 0.003125;
 	size_t total = 100000;
 	unsigned seed; __asm__ __volatile__ ("rdtsc" : "=a" (seed));
 	info << "alpha = " << alpha << std::endl;
