@@ -409,9 +409,9 @@ private:
 class state {
 public:
 	state(const int& opcode = -1)
-		: opcode(opcode), score(-1), esti(0) {}
+		: opcode(opcode), score(-1), esti(-std::numeric_limits<float>::max()) {}
 	state(const board& b, const int& opcode = -1)
-		: opcode(opcode), score(-1), esti(0) { assign(b); }
+		: opcode(opcode), score(-1), esti(-std::numeric_limits<float>::max()) { assign(b); }
 	state(const state& st)
 		: before(st.before), after(st.after), opcode(st.opcode), score(st.score), esti(st.esti) {}
 
