@@ -629,11 +629,10 @@ int main(int argc, const char* argv[]) {
 	std::srand(seed);
 
 	// initialize the patterns
-	tdl.add_feature(new pattern<4>(0, 1, 2, 3));
-	tdl.add_feature(new pattern<4>(4, 5, 6, 7));
-	tdl.add_feature(new pattern<4>(0, 1, 4, 5));
-	tdl.add_feature(new pattern<4>(1, 2, 5, 6));
-	tdl.add_feature(new pattern<4>(5, 6, 9,10));
+	tdl.add_feature(new pattern<6>(0, 1, 2, 3, 4, 5));
+	tdl.add_feature(new pattern<6>(4, 5, 6, 7, 8, 9));
+	tdl.add_feature(new pattern<6>(0, 1, 2, 4, 5, 6));
+	tdl.add_feature(new pattern<6>(4, 5, 6, 8, 9,10));
 
 	// restore the model from file
 	tdl.load("");
