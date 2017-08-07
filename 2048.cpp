@@ -577,7 +577,7 @@ public:
 			}
 			for (size_t i = 0; i < size; i++) {
 				in >> *(feats[i]);
-				info << feats[i]->name() << " is loaded from " << load << std::endl;
+				info << feats[i]->name() << " is loaded from " << path << std::endl;
 			}
 			in.close();
 		}
@@ -591,7 +591,7 @@ public:
 			out.write(reinterpret_cast<char*>(&size), sizeof(size));
 			for (size_t i = 0; i < size; i++) {
 				out << *(feats[i]);
-				info << feats[i]->name() << " is saved to " << save << std::endl;
+				info << feats[i]->name() << " is saved to " << path << std::endl;
 			}
 			out.flush();
 			out.close();
