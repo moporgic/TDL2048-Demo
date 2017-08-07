@@ -467,7 +467,7 @@ private:
 class learning {
 public:
 	learning() {}
-	~learning() { for (size_t i = 0; i < feats.size(); i++) delete feats[i]; }
+	~learning() {}
 	void add_feature(feature* feat) { feats.push_back(feat); }
 
 	/**
