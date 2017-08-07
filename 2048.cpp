@@ -32,11 +32,11 @@ private:
 public:
 	output(std::ostream& out, const bool& en = true) : out(out), enable(en) {}
 	template<typename type>
-	inline output& operator <<(const type& v) {
+	output& operator <<(const type& v) {
 		if (enable) out << v;
 		return *this;
 	}
-	inline output& operator <<(std::ostream& (*pf)(std::ostream&)) {
+	output& operator <<(std::ostream& (*pf)(std::ostream&)) {
 		if (enable) out << pf;
 		return *this;
 	}
@@ -49,14 +49,17 @@ class board {
 public:
 	typedef unsigned long long value_t;
 
-	inline board(const value_t& raw = 0) : raw(raw) {}
-	inline board(const board& b) : raw(b.raw) {}
-	inline operator value_t&() { return raw; }
+	board(const value_t& raw = 0) : raw(raw) {}
+	board(const board& b) : raw(b.raw) {}
+	operator value_t&() { return raw; }
+	bool operator ==(const board& b) const { return raw == b.raw; }
+	bool operator !=(const board& b) const { return raw != b.raw; }
 
-	inline int  fetch(const int& i) const { return ((raw >> (i << 4)) & 0xffff); }
-	inline void place(const int& i, const int& r) { raw = (raw & ~(0xffffULL << (i << 4))) | (value_t(r & 0xffff) << (i << 4)); }
-	inline int  at(const int& i) const { return (raw >> (i << 2)) & 0x0f; }
-	inline void set(const int& i, const int& t) { raw = (raw & ~(0x0fULL << (i << 2))) | (value_t(t & 0x0f) << (i << 2)); }
+
+	int  fetch(const int& i) const { return ((raw >> (i << 4)) & 0xffff); }
+	void place(const int& i, const int& r) { raw = (raw & ~(0xffffULL << (i << 4))) | (value_t(r & 0xffff) << (i << 4)); }
+	int  at(const int& i) const { return (raw >> (i << 2)) & 0x0f; }
+	void set(const int& i, const int& t) { raw = (raw & ~(0x0fULL << (i << 2))) | (value_t(t & 0x0f) << (i << 2)); }
 
 private:
 	struct lookup {
@@ -79,12 +82,12 @@ private:
 			right = ((R[0] << 0) | (R[1] << 4) | (R[2] << 8) | (R[3] << 12));
 		}
 
-		inline void move_left(value_t& raw, int& sc, const int& i) const {
+		void move_left(value_t& raw, int& sc, const int& i) const {
 			raw |= value_t(left) << (i << 4);
 			sc += score;
 		}
 
-		inline void move_right(value_t& raw, int& sc, const int& i) const {
+		void move_right(value_t& raw, int& sc, const int& i) const {
 			raw |= value_t(right) << (i << 4);
 			sc += score;
 		}
@@ -128,7 +131,7 @@ private:
 	};
 
 public:
-	inline int move_left() {
+	int move_left() {
 		value_t move = 0;
 		value_t prev = raw;
 		int score = 0;
@@ -139,7 +142,7 @@ public:
 		raw = move;
 		return (move != prev) ? score : -1;
 	}
-	inline int move_right() {
+	int move_right() {
 		value_t move = 0;
 		value_t prev = raw;
 		int score = 0;
@@ -150,46 +153,46 @@ public:
 		raw = move;
 		return (move != prev) ? score : -1;
 	}
-	inline int move_up() {
+	int move_up() {
 		rotate_right();
 		int score = move_right();
 		rotate_left();
 		return score;
 	}
-	inline int move_down() {
+	int move_down() {
 		rotate_right();
 		int score = move_left();
 		rotate_left();
 		return score;
 	}
-	inline int move(const int& opcode) { // 0:up 1:right 2:down 3:left
+	int move(const int& opcode) { // 0:up 1:right 2:down 3:left
 		switch (opcode) {
 		case 0: return move_up();
 		case 1: return move_right();
 		case 2: return move_down();
 		case 3: return move_left();
-		default: return move((opcode % 4 + 4) % 4);
+		default: return -1;
 		}
 	}
 
-	inline void transpose() {
+	void transpose() {
 		raw = (raw & 0xf0f00f0ff0f00f0fULL) | ((raw & 0x0000f0f00000f0f0ULL) << 12) | ((raw & 0x0f0f00000f0f0000ULL) >> 12);
 		raw = (raw & 0xff00ff0000ff00ffULL) | ((raw & 0x00000000ff00ff00ULL) << 24) | ((raw & 0x00ff00ff00000000ULL) >> 24);
 	}
-	inline void mirror() {
+	void mirror() {
 		raw = ((raw & 0x000f000f000f000fULL) << 12) | ((raw & 0x00f000f000f000f0ULL) << 4)
 			| ((raw & 0x0f000f000f000f00ULL) >> 4) | ((raw & 0xf000f000f000f000ULL) >> 12);
 	}
-	inline void flip() {
+	void flip() {
 		raw = ((raw & 0x000000000000ffffULL) << 48) | ((raw & 0x00000000ffff0000ULL) << 16)
 			| ((raw & 0x0000ffff00000000ULL) >> 16) | ((raw & 0xffff000000000000ULL) >> 48);
 	}
 
-	inline void rotate_right() { transpose(); mirror(); } // clockwise
-	inline void rotate_left() { transpose(); flip(); } // counterclockwise
-	inline void reverse() { mirror(); flip(); }
+	void rotate_right() { transpose(); mirror(); } // clockwise
+	void rotate_left() { transpose(); flip(); } // counterclockwise
+	void reverse() { mirror(); flip(); }
 
-	inline void rotate(const int& r = 1) {
+	void rotate(const int& r = 1) {
 		switch (((r % 4) + 4) % 4) {
 		default:
 		case 0: break;
@@ -199,8 +202,8 @@ public:
 		}
 	}
 
-	inline void init() { raw = 0; popup(); popup(); }
-	inline void popup() { // add a new random 2-tile or 4-tile
+	void init() { raw = 0; popup(); popup(); }
+	void popup() { // add a new random 2-tile or 4-tile
 		int space[16], num = 0;
 		for (int i = 0; i < 16; i++)
 			if (at(i) == 0) {
@@ -236,12 +239,9 @@ class feature {
 public:
 	feature(const size_t& len) : length(len), weight(alloc(len)) {}
 	virtual ~feature() { delete[] weight; }
-	inline float& operator[] (const size_t& i) { return weight[i]; }
+	float& operator[] (const size_t& i) { return weight[i]; }
 	size_t size() const { return length; }
-	static std::vector<feature*>& list() {
-		static std::vector<feature*> feats;
-		return feats;
-	}
+
 	friend std::ostream& operator <<(std::ostream& out, const feature& w) {
 		std::string name = w.name();
 		int len = name.length();
@@ -359,7 +359,7 @@ private:
 	struct indexer {
 		int patt[N];
 		void init(int p[N]) { std::copy(p, p + N, patt); }
-		inline size_t operator[](const board& b) const {
+		size_t operator[](const board& b) const {
 			size_t index = 0;
 			for (int i = 0; i < N; i++)
 				index |= b.at(patt[i]) << (4 * i);
@@ -379,65 +379,51 @@ private:
 };
 
 /**
- * after-state wrapper
+ * before state and after state wrapper
  */
 class state {
 public:
-	state(const int& opcode) : opcode(opcode), value(-std::numeric_limits<float>::max()), score(-1) {}
-	state(const state& st) : opcode(st.opcode), before(st.before), after(st.after), value(st.value), score(st.score) {}
-	state(const board& b, const int& opcode) : opcode(opcode), value(0), score(-1) { assign(b); }
+	state(const int& opcode = -1)
+		: opcode(opcode), esti(0), score(-1) {}
+	state(const board& b, const int& opcode = -1)
+		: opcode(opcode), esti(0), score(-1) { assign(b); }
+	state(const state& st)
+		: opcode(st.opcode), before(st.before), after(st.after), esti(st.esti), score(st.score) {}
 
 	board after_state() const { return after; }
 	board before_state() const { return before; }
-	int   merge_score() const { return score; }
-	float estimated_value() const { return value; }
+	float value() const { return esti; }
+	int reward() const { return score; }
+	int action() const { return opcode; }
+	const char* name() const {
+		static const char* opname[4] = { "up", "right", "down", "left" };
+		return (opcode >= 0 && opcode < 4) ? opname[opcode] : "none";
+	}
 
-	state& assign(const board& b) {
-		debug << "assign " << std::endl << before;
+	void assign(const board& b) {
+		debug << "assign " << std::endl << b;
 		after = before = b;
 		score = after.move(opcode);
-		return *this;
 	}
 
-	state& estimate() {
-		debug << "estimate " << std::endl << before;
-		if (score != -1) {
-			value = score;
-			for (size_t i = 0; i < feature::list().size(); i++)
-				value += feature::list()[i]->estimate(after);
-		} else {
-			value = -std::numeric_limits<float>::max();
-		}
-		return *this;
-	}
-
-	state& update(const float& exact, const float& alpha = 0.001) {
-		debug << "update " << exact << " (" << alpha << ")" << std::endl;
-		float error = exact - (value - score);
-		float update = alpha * error;
-		value = score;
-		for (size_t i = 0; i < feature::list().size(); i++)
-			value += feature::list()[i]->update(after, update);
-		return *this;
-	}
+	void set_before_state(const board& b) { before = b; }
+	void set_after_state(const board& b) { after = b; }
+	void set_value(const float& v) { esti = v; }
+	void set_reward(const int& r) { score = r; }
+	void set_action(const int& a) { opcode = a; }
 
 	bool is_valid() const {
-		if (std::isnan(value)) {
+		if (std::isnan(esti)) {
 			error << "numeric exception" << std::endl;
 			std::exit(1);
 		}
-		return score != -1;
-	}
-
-	const char* name() const {
-		static const char* opname[4] = { "up", "right", "down", "left" };
-		return opname[opcode];
+		return after != before && score != -1;
 	}
 
     friend std::ostream& operator <<(std::ostream& out, const state& st) {
 		out << "moving " << st.name() << ", reward = " << st.score;
 		if (st.is_valid()) {
-			info << ", value = " << st.value << std::endl << st.after;
+			info << ", value = " << st.esti << std::endl << st.after;
 		} else {
 			info << " (invalid)" << std::endl;
 		}
@@ -447,96 +433,95 @@ private:
 	int opcode;
 	board before;
 	board after;
-	float value;
+	float esti;
 	int score;
 };
 
-int main(int argc, const char* argv[]) {
-	info << "TDL2048-Demo" << std::endl;
+class learning {
+public:
+	learning() {}
+	~learning() { for (size_t i = 0; i < feats.size(); i++) delete feats[i]; }
+	void add_feature(feature* feat) { feats.push_back(feat); }
 
-	// initialize the learning parameters
-	float alpha = 0.001;
-	size_t total = 100000;
-	unsigned int seed;
-    __asm__ __volatile__ ("rdtsc" : "=a" (seed));
-	std::srand(seed);
-
-	info << "alpha = " << alpha << std::endl;
-	info << "total = " << total << std::endl;
-	info << "seed = " << seed << std::endl;
-
-	// initialize the patterns
-	feature::list().push_back(new pattern<4>(0, 1, 2, 3));
-	feature::list().push_back(new pattern<4>(4, 5, 6, 7));
-
-	// initialize the weight table binary path
-	std::string load = "";
-	std::string save = "";
-
-	// load weight table from binary file
-	std::ifstream in;
-	in.open(load.c_str(), std::ios::in | std::ios::binary);
-	if (in.is_open()) {
-		size_t size;
-		in.read(reinterpret_cast<char*>(&size), sizeof(size));
-		if (size != feature::list().size()) {
-			error << "unexpected feature count: " << size
-					<< " (" << feature::list().size() << " is expected)" << std::endl;
-			std::exit(1);
-		}
-		for (size_t i = 0; i < size; i++) {
-			in >> *(feature::list()[i]);
-			info << feature::list()[i]->name() << " is loaded from " << load << std::endl;
-		}
-		in.close();
+	float estimate(const board& b) {
+		debug << "estimate " << std::endl << b;
+		float value = 0;
+		for (size_t i = 0; i < feats.size(); i++)
+			value += feats[i]->estimate(b);
+		return value;
 	}
 
-	std::vector<state> path;
-	path.reserve(20000);
-	int scores[1000];
-	int maxtile[1000];
+	float update(const board& b, const float& update) {
+		debug << "update " << " (" << update << ")" << std::endl << b;
+		float value = 0;
+		for (size_t i = 0; i < feats.size(); i++)
+			value += feats[i]->update(b, update);
+		return 0;
+	}
 
-	for (size_t n = 1; n <= total; n++) {
+	void learn(const float& alpha = 0.001, const size_t& total = 100000, const unsigned& seed = 0) {
+		std::srand(seed);
 
-		// play an episode
-		int score = 0;
-		board b;
-		b.init();
+		std::vector<state> path;
+		path.reserve(20000);
+
+		for (size_t n = 1; n <= total; n++) {
+
+			// play an episode
+			int score = 0;
+			board b;
+			b.init();
+			while (true) {
+				debug << "state" << std::endl << b;
+
+				state best = select_best_move(b);
+
+				if (best.is_valid()) {
+					debug << "best " << best;
+					path.push_back(best);
+					score += best.reward();
+					b = best.after_state();
+					b.popup();
+				} else {
+					debug << "gameover, ";
+					path.push_back(state(b));
+					break;
+				}
+			}
+
+			update_backward(path, alpha);
+			update_statistics(n, b, score);
+			path.clear();
+		}
+	}
+
+	state select_best_move(const board& b) {
 		state after[4] = { 0 /* up */, 1 /* right */, 2 /* down */, 3 /* left */ };
-		while (true) {
-			debug << "beforestate" << std::endl << b;
-
-			// try to find a best move
-			state* best = after;
-			for (state* move = after; move != after + 4; move++) {
-				move->assign(b);
-				move->estimate();
-				if (move->estimated_value() > best->estimated_value())
+		state* best = after;
+		for (state* move = after; move != after + 4; move++) {
+			move->assign(b);
+			if (move->reward() != -1) {
+				move->set_value(move->reward() + estimate(move->after_state()));
+				if (move->value() > best->value())
 					best = move;
-				debug << "try " << *move;
-			}
-
-			if (best->is_valid()) {
-				debug << "best " << *best;
-				path.push_back(*best);
-				score += best->merge_score();
-				b = best->after_state();
-				b.popup();
 			} else {
-				debug << "gameover, ";
-				break;
+				move->set_value(-std::numeric_limits<float>::max());
 			}
+			debug << "try " << *move;
 		}
+		return *best;
+	}
 
-		// update the weight table by TD(0)
+	void update_backward(std::vector<state>& path, const float& alpha = 0.001) {
 		float exact = 0;
-		while (path.size()) {
-			path.back().update(exact, alpha);
-			exact = path.back().estimated_value();
-			path.pop_back();
+		for (path.pop_back(); path.size(); path.pop_back()) {
+			state& move = path.back();
+			float error = exact - (move.value() - move.reward());
+			exact = move.reward() + update(move.after_state(), alpha * error);
 		}
+	}
 
-		// statistics
+	void update_statistics(size_t n, const board& b, const int& score) {
 		int ep = (n - 1) % 1000;
 		scores[ep] = score;
 		maxtile[ep] = 0;
@@ -565,23 +550,68 @@ int main(int argc, const char* argv[]) {
 				c += stat[t];
 				info << "\t" << ((1 << t) & -2u) << "\t" << (stat[t] * 0.1) << "%\t(" << (c * 0.1) << "%)" << std::endl;
 			}
-
 		}
 	}
 
-	// save weight table to binary file
-	std::ofstream out;
-	out.open(save.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
-	if (out.is_open()) {
-		size_t size = feature::list().size();
-		out.write(reinterpret_cast<char*>(&size), sizeof(size));
-		for (size_t i = 0; i < size; i++) {
-			out << *(feature::list()[i]);
-			info << feature::list()[i]->name() << " is saved to " << save << std::endl;
+	void load(const std::string& path) {
+		std::ifstream in;
+		in.open(path.c_str(), std::ios::in | std::ios::binary);
+		if (in.is_open()) {
+			size_t size;
+			in.read(reinterpret_cast<char*>(&size), sizeof(size));
+			if (size != feats.size()) {
+				error << "unexpected feature count: " << size << " (" << feats.size() << " is expected)" << std::endl;
+				std::exit(1);
+			}
+			for (size_t i = 0; i < size; i++) {
+				in >> *(feats[i]);
+				info << feats[i]->name() << " is loaded from " << load << std::endl;
+			}
+			in.close();
 		}
-		out.flush();
-		out.close();
 	}
+
+	void save(const std::string& path) {
+		std::ofstream out;
+		out.open(path.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+		if (out.is_open()) {
+			size_t size = feats.size();
+			out.write(reinterpret_cast<char*>(&size), sizeof(size));
+			for (size_t i = 0; i < size; i++) {
+				out << *(feats[i]);
+				info << feats[i]->name() << " is saved to " << save << std::endl;
+			}
+			out.flush();
+			out.close();
+		}
+	}
+
+private:
+	std::vector<feature*> feats;
+	int scores[1000];
+	int maxtile[1000];
+};
+
+int main(int argc, const char* argv[]) {
+	info << "TDL2048-Demo" << std::endl;
+	learning tdl;
+
+	// initialize the learning parameters
+	float alpha = 0.001;
+	size_t total = 100000;
+	unsigned seed; __asm__ __volatile__ ("rdtsc" : "=a" (seed));
+	info << "alpha = " << alpha << std::endl;
+	info << "total = " << total << std::endl;
+	info << "seed = " << seed << std::endl;
+
+	// initialize the patterns
+	tdl.add_feature(new pattern<4>(0, 1, 2, 3));
+	tdl.add_feature(new pattern<4>(4, 5, 6, 7));
+
+	// train the model (restore/store if necessary)
+	tdl.load("");
+	tdl.learn(alpha, total, seed);
+	tdl.save("");
 
 	return 0;
 }
