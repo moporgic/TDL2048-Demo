@@ -618,6 +618,9 @@ int main(int argc, const char* argv[]) {
 	// initialize the patterns
 	tdl.add_feature(new pattern<4>(0, 1, 2, 3));
 	tdl.add_feature(new pattern<4>(4, 5, 6, 7));
+	tdl.add_feature(new pattern<4>(0, 1, 4, 5));
+	tdl.add_feature(new pattern<4>(1, 2, 5, 6));
+	tdl.add_feature(new pattern<4>(5, 6, 9,10));
 
 	// restore the model from the file if necessary
 	tdl.load("");
