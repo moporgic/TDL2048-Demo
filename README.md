@@ -3,7 +3,9 @@ Temporal Difference Learning for Game 2048 (Demo)<br>
 <p>
 Computer Games and Intelligence (CGI) Lab, NCTU, Taiwan<br>
 http://www.aigames.nctu.edu.tw/<br>
-January 2017<br>
+<p>
+Basic framework for training 2048 after-state agent.
+Including 64-bit bitboard, n-tuple network and isomorphic feature builder, TD(0) training process.
 <p>
 References:<br>
 [1] Szubert, Marcin, and Wojciech Jaśkowski. "Temporal difference learning of n-tuple networks for the game 2048."
