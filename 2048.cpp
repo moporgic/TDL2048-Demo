@@ -566,35 +566,41 @@ public:
 	}
 
 	/**
-	 * update the statistic, and display the status once in 1000 episodes
+	 * update the statistic, and display the status once in several episodes
 	 */
-	void make_statistic(const size_t& n, const board& b, const int& score) {
-		int ep = (n - 1) % 1000;
-		scores[ep] = score;
-		maxtile[ep] = 0;
+	void make_statistic(const size_t& n, const board& b, const int& score, const int& unit = 1000) {
+		scores.push_back(score);
+		maxtile.push_back(0);
 		for (int i = 0; i < 16; i++) {
-			maxtile[ep] = std::max(maxtile[ep], b.at(i));
+			maxtile.back() = std::max(maxtile.back(), b.at(i));
 		}
 
 		// show the training process
-		if (n % 1000 == 0) {
-			float sum = std::accumulate(scores, scores + 1000, 0);
-			int max = *std::max_element(scores, scores + 1000);
+		if (n % unit == 0) {
+			if (scores.size() != size_t(unit) || maxtile.size() != size_t(unit)) {
+				error << "wrong statistic size for show statistics" << std::endl;
+				std::exit(2);
+			}
+			float sum = std::accumulate(scores.begin(), scores.end(), 0);
+			int max = *std::max_element(scores.begin(), scores.end());
 			int stat[16] = { 0 };
 			for (int i = 0; i < 16; i++) {
-				stat[i] = std::count(maxtile, maxtile + 1000, i);
+				stat[i] = std::count(maxtile.begin(), maxtile.end(), i);
 			}
-			float mean = sum / 1000;
+			float mean = sum / unit;
+			float coef = 100.0 / unit;
 			info << n;
 			info << "\t" "mean = " << mean;
 			info << "\t" "max = " << max;
 			info << std::endl;
-			for (int t = 1, c = 0; c < 1000; c += stat[t++]) {
+			for (int t = 1, c = 0; c < unit; c += stat[t++]) {
 				if (stat[t] == 0) continue;
 				int accu = std::accumulate(stat + t, stat + 16, 0);
-				info << "\t" << ((1 << t) & -2u) << "\t" << (stat[t] * 0.1) << "%";
-				info << "\t(" << (accu * 0.1) << "%)" << std::endl;
+				info << "\t" << ((1 << t) & -2u) << "\t" << (stat[t] * coef) << "%";
+				info << "\t(" << (accu * coef) << "%)" << std::endl;
 			}
+			scores.clear();
+			maxtile.clear();
 		}
 	}
 
@@ -640,8 +646,8 @@ public:
 
 private:
 	std::vector<feature*> feats;
-	int scores[1000];
-	int maxtile[1000];
+	std::vector<int> scores;
+	std::vector<int> maxtile;
 };
 
 int main(int argc, const char* argv[]) {
