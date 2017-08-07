@@ -279,6 +279,7 @@ public: // should be implemented
 	virtual float estimate(const board& b) = 0;
 	virtual float update(const board& b, const float& upd) = 0;
 	virtual std::string name() const = 0;
+
 protected:
 	static float* alloc(size_t num) {
 		static size_t total = 0;
@@ -299,6 +300,17 @@ protected:
 
 /**
  * the pattern feature
+ * including isomorphic (rotate/mirror)
+ *
+ * index:
+ *  0  1  2  3
+ *  4  5  6  7
+ *  8  9 10 11
+ * 12 13 14 15
+ *
+ * usage:
+ *  pattern<4>(0, 1, 2, 3)
+ *  pattern<6>(0, 1, 2, 3, 4, 5)
  */
 template<int N>
 class pattern : public feature {
