@@ -334,7 +334,7 @@ public:
 			isomorphic[i].init(isopatt);
 		}
 
-		info << name() << " initialized, size = " << length;
+		info << name() << ", size = " << length;
 		if (length >= (1 << 30)) {
 			info << " (" << (length >> 30) << "G)";
 		} else if (length >= (1 << 20)) {
@@ -396,11 +396,11 @@ private:
 class state {
 public:
 	state(const int& opcode = -1)
-		: opcode(opcode), esti(0), score(-1) {}
+		: opcode(opcode), score(-1), esti(0) {}
 	state(const board& b, const int& opcode = -1)
-		: opcode(opcode), esti(0), score(-1) { assign(b); }
+		: opcode(opcode), score(-1), esti(0) { assign(b); }
 	state(const state& st)
-		: opcode(st.opcode), before(st.before), after(st.after), esti(st.esti), score(st.score) {}
+		: before(st.before), after(st.after), opcode(st.opcode), score(st.score), esti(st.esti) {}
 
 	board after_state() const { return after; }
 	board before_state() const { return before; }
@@ -442,11 +442,11 @@ public:
 		return out;
 	}
 private:
-	int opcode;
 	board before;
 	board after;
-	float esti;
+	int opcode;
 	int score;
+	float esti;
 };
 
 class learning {
@@ -475,45 +475,6 @@ public:
 		for (size_t i = 0; i < feats.size(); i++)
 			value += feats[i]->update(b, update);
 		return 0;
-	}
-
-	/**
-	 * train the model by temporal difference learning
-	 * you may set alpha = 0 if you want to perform testing
-	 */
-	void learn(const float& alpha = 0.001, const size_t& total = 100000, const unsigned& seed = 0) {
-		std::srand(seed);
-
-		std::vector<state> path;
-		path.reserve(20000);
-
-		for (size_t n = 1; n <= total; n++) {
-			int score = 0;
-
-			// play an episode
-			board b;
-			b.init();
-			while (true) {
-				debug << "state" << std::endl << b;
-				state best = select_best_move(b);
-
-				if (best.is_valid()) {
-					debug << "best " << best;
-					score += best.reward();
-					path.push_back(best);
-					b = best.after_state();
-					b.popup();
-				} else {
-					debug << "gameover, ";
-					path.push_back(state(b));
-					break;
-				}
-			}
-
-			update_episode(path, alpha);
-			update_statistics(n, b, score);
-			path.clear();
-		}
 	}
 
 	/**
@@ -555,9 +516,8 @@ public:
 	 *  (initial) s0 --(a0,r0)--> s0' --(popup)--> s1 --(a1,r1)--> s1' --(popup)--> s2 (game over)
 	 *  where sx is before state, sx' is after state
 	 * its path would be
-	 *  path[0] == (s0,s0',a0,r0)
-	 *  path[1] == (s1,s1',a1,r1)
-	 *  path[2] == (s2,-,-,-)
+	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,-,-,-) }
+	 *  see the constructor of state for more details
 	 */
 	void update_episode(std::vector<state>& path, const float& alpha = 0.001) {
 		float exact = 0;
@@ -568,6 +528,9 @@ public:
 		}
 	}
 
+	/**
+	 * update the statistic, and display the status once in 1000 episodes
+	 */
 	void update_statistics(size_t n, const board& b, const int& score) {
 		int ep = (n - 1) % 1000;
 		scores[ep] = score;
@@ -650,14 +613,47 @@ int main(int argc, const char* argv[]) {
 	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
 	info << "seed = " << seed << std::endl;
+	std::srand(seed);
 
 	// initialize the patterns
 	tdl.add_feature(new pattern<4>(0, 1, 2, 3));
 	tdl.add_feature(new pattern<4>(4, 5, 6, 7));
 
-	// train the model (restore/store if necessary)
+	// restore the model from the file if necessary
 	tdl.load("");
-	tdl.learn(alpha, total, seed);
+
+	// train the model
+	std::vector<state> path;
+	path.reserve(20000);
+	for (size_t n = 1; n <= total; n++) {
+		int score = 0;
+
+		// play an episode
+		board b;
+		b.init();
+		while (true) {
+			debug << "state" << std::endl << b;
+			state best = tdl.select_best_move(b);
+
+			if (best.is_valid()) {
+				debug << "best " << best;
+				score += best.reward();
+				path.push_back(best);
+				b = best.after_state();
+				b.popup();
+			} else {
+				debug << "gameover, ";
+				path.push_back(state(b));
+				break;
+			}
+		}
+
+		tdl.update_episode(path, alpha);
+		tdl.update_statistics(n, b, score);
+		path.clear();
+	}
+
+	// store the model into the file
 	tdl.save("");
 
 	return 0;
