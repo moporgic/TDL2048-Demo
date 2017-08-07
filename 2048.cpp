@@ -532,7 +532,7 @@ public:
 	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,-,-,-) }
 	 *  see the constructor of state for more details
 	 */
-	void update_episode(std::vector<state>& path, const float& alpha = 0.001) {
+	void update_path(std::vector<state>& path, const float& alpha = 0.001) {
 		float exact = 0;
 		for (path.pop_back(); path.size(); path.pop_back()) {
 			state& move = path.back();
@@ -544,7 +544,7 @@ public:
 	/**
 	 * update the statistic, and display the status once in 1000 episodes
 	 */
-	void update_statistics(size_t n, const board& b, const int& score) {
+	void make_statistic(size_t n, const board& b, const int& score) {
 		int ep = (n - 1) % 1000;
 		scores[ep] = score;
 		maxtile[ep] = 0;
@@ -641,30 +641,29 @@ int main(int argc, const char* argv[]) {
 	std::vector<state> path;
 	path.reserve(20000);
 	for (size_t n = 1; n <= total; n++) {
+		board b;
 		int score = 0;
 
 		// play an episode
-		board b;
 		b.init();
 		while (true) {
 			debug << "state" << std::endl << b;
 			state best = tdl.select_best_move(b);
+			path.push_back(best);
 
 			if (best.is_valid()) {
 				debug << "best " << best;
 				score += best.reward();
-				path.push_back(best);
 				b = best.after_state();
 				b.popup();
 			} else {
-				debug << "gameover, ";
-				path.push_back(best);
+				debug << "gameover" << std::endl;
 				break;
 			}
 		}
 
-		tdl.update_episode(path, alpha);
-		tdl.update_statistics(n, b, score);
+		tdl.update_path(path, alpha);
+		tdl.make_statistic(n, b, score);
 		path.clear();
 	}
 
