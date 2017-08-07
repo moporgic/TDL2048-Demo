@@ -317,7 +317,7 @@ protected:
 template<int N>
 class pattern : public feature {
 public:
-	pattern(int t0, ...) : feature(1 << (N * 4)) {
+	pattern(int t0, ...) : feature(1 << (N * 4)), iso_last(8) {
 		va_list ap;
 		va_start(ap, t0);
 		patt[0] = t0;
@@ -351,17 +351,18 @@ public:
 	virtual float estimate(const board& b) {
 		debug << name() << " estimate: " << std::endl << b;
 		float value = 0;
-		for (int i = 0; i < 8; i++)
+		for (int i = 0; i < iso_last; i++)
 			value += (operator [](isomorphic[i][b]));
 		return value;
 	}
 	virtual float update(const board& b, const float& v) {
 		debug << name() << " update: " << v << std::endl;
 		float value = 0;
-		for (int i = 0; i < 8; i++)
+		for (int i = 0; i < iso_last; i++)
 			value += (operator [](isomorphic[i][b]) += v);
 		return value;
 	}
+
 	virtual std::string name() const {
 		std::stringstream ss;
 		ss << N << "-tuple pattern " << std::hex;
@@ -369,6 +370,14 @@ public:
 			ss << patt[i];
 		return ss.str();
 	}
+
+	/*
+	 * set the isomorphic of this pattern
+	 * 0: disable isomorphic
+	 * 4: enable rotation
+	 * 8: enable rotation and reflection
+	 */
+	void set_isomorphic(const int& i = 8) { iso_last = i; }
 private:
 	struct indexer {
 		int patt[N];
@@ -390,6 +399,7 @@ private:
 
 	int patt[N];
 	indexer isomorphic[8];
+	int iso_last;
 };
 
 /**
