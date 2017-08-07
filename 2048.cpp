@@ -536,7 +536,7 @@ public:
 		float exact = 0;
 		for (path.pop_back(); path.size(); path.pop_back()) {
 			state& move = path.back();
-			float error = exact - (estimate(move.after_state()) - move.reward());
+			float error = exact - estimate(move.after_state());
 			exact += move.reward() + update(move.after_state(), alpha * error);
 		}
 	}
