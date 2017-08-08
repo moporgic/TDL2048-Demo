@@ -17,6 +17,7 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <array>
 #include <limits>
 #include <numeric>
 #include <cstdarg>
@@ -53,7 +54,8 @@ public:
 	typedef unsigned long long value_t;
 
 	board(const value_t& raw = 0) : raw(raw) {}
-	board(const board& b) : raw(b.raw) {}
+	board(const board& b) = default;
+	board& operator =(const board& b) = default;
 	operator value_t&() { return raw; }
 	bool operator ==(const board& b) const { return raw == b.raw; }
 	bool operator !=(const board& b) const { return raw != b.raw; }
@@ -241,6 +243,10 @@ private:
 class feature {
 public:
 	feature(const size_t& len) : length(len), weight(alloc(len)) {}
+	feature(feature&& f) : length(f.length), weight(f.weight) { f.weight = nullptr; }
+	feature(const feature& f) = delete;
+	feature& operator =(const feature& f) = delete;
+
 	virtual ~feature() { delete[] weight; }
 	float& operator[] (const size_t& i) { return weight[i]; }
 	size_t size() const { return length; }
@@ -299,7 +305,7 @@ protected:
 			error << "memory limit exceeded" << std::endl;
 			std::exit(-1);
 		}
-		return NULL;
+		return nullptr;
 	}
 	size_t length;
 	float* weight;
@@ -342,7 +348,10 @@ public:
 			isomorphic[i].init(isopatt);
 		}
 	}
+	pattern(pattern<N>&& p) : feature(p), patt(p.patt), isomorphic(p.isomorphic), iso_last(p.iso_last) {}
+	pattern(const pattern<N>& p) = delete;
 	virtual ~pattern() {}
+	pattern<N>& operator =(const pattern<N>& p) = delete;
 
 	virtual float estimate(const board& b) {
 		debug << name() << " estimate: " << std::endl << b;
@@ -393,8 +402,8 @@ private:
 		}
 	};
 
-	int patt[N];
-	indexer isomorphic[8];
+	std::array<int, N> patt;
+	std::array<indexer, 8> isomorphic;
 	int iso_last;
 };
 
@@ -407,8 +416,8 @@ public:
 		: opcode(opcode), score(-1), esti(-std::numeric_limits<float>::max()) {}
 	state(const board& b, const int& opcode = -1)
 		: opcode(opcode), score(-1), esti(-std::numeric_limits<float>::max()) { assign(b); }
-	state(const state& st)
-		: before(st.before), after(st.after), opcode(st.opcode), score(st.score), esti(st.esti) {}
+	state(const state& st) = default;
+	state& operator =(const state& st) = default;
 
 	board after_state() const { return after; }
 	board before_state() const { return before; }
@@ -444,9 +453,9 @@ public:
     friend std::ostream& operator <<(std::ostream& out, const state& st) {
 		out << "moving " << st.name() << ", reward = " << st.score;
 		if (st.is_valid()) {
-			info << ", value = " << st.esti << std::endl << st.after;
+			out << ", value = " << st.esti << std::endl << st.after;
 		} else {
-			info << " (invalid)" << std::endl;
+			out << " (invalid)" << std::endl;
 		}
 		return out;
 	}
@@ -487,11 +496,11 @@ public:
 	/**
 	 * find a feature by its name, return nullptr if not found
 	 */
-	feature* find_feature(const std::string& name) {
-		for (size_t i = 0; i < feats.size(); i++)
-			if (feats[i]->name() == name)
-				return feats[i];
-		return NULL;
+	feature* find_feature(const std::string& name) const {
+		for (feature* feat : feats)
+			if (feat->name() == name)
+				return feat;
+		return nullptr;
 	}
 
 	/**
@@ -500,8 +509,8 @@ public:
 	float estimate(const board& b) {
 		debug << "estimate " << std::endl << b;
 		float value = 0;
-		for (size_t i = 0; i < feats.size(); i++)
-			value += feats[i]->estimate(b);
+		for (feature* feat : feats)
+			value += feat->estimate(b);
 		return value;
 	}
 
@@ -511,8 +520,8 @@ public:
 	float update(const board& b, const float& update) {
 		debug << "update " << " (" << update << ")" << std::endl << b;
 		float value = 0;
-		for (size_t i = 0; i < feats.size(); i++)
-			value += feats[i]->update(b, update);
+		for (feature* feat : feats)
+			value += feat->update(b, update);
 		return value;
 	}
 
