@@ -17,6 +17,7 @@
 #include <iostream>
 #include <algorithm>
 #include <functional>
+#include <iterator>
 #include <vector>
 #include <array>
 #include <limits>
@@ -294,6 +295,9 @@ public: // should be implemented
 	virtual float update(const board& b, const float& upd) = 0;
 	virtual std::string name() const = 0;
 
+public:
+	virtual void dump(const board& b, output& out = info) const {}
+
 protected:
 	static float* alloc(size_t num) {
 		static size_t total = 0;
@@ -339,14 +343,14 @@ public:
 		va_end(ap);
 
 		// make isomorphic patterns
-		int isopatt[N];
+		std::array<int, N> isopatt;
 		for (int i = 0; i < 8; i++) {
 			board iso = 0xfedcba9876543210ull;
 			if (i >= 4) iso.mirror();
 			iso.rotate(i);
 			for (int n = 0; n < N; n++)
 				isopatt[n] = iso.at(patt[n]);
-			isomorphic[i].init(isopatt);
+			isomorphic[i].patt = isopatt;
 		}
 	}
 	pattern(pattern<N>&& p) : feature(p), patt(p.patt), isomorphic(p.isomorphic), iso_last(p.iso_last) {}
@@ -354,6 +358,7 @@ public:
 	virtual ~pattern() {}
 	pattern<N>& operator =(const pattern<N>& p) = delete;
 
+public:
 	virtual float estimate(const board& b) {
 		debug << name() << " estimate: " << std::endl << b;
 		float value = 0;
@@ -377,6 +382,8 @@ public:
 		return ss.str();
 	}
 
+public:
+
 	/*
 	 * set the isomorphic of this pattern
 	 * 1: no isomorphic
@@ -384,21 +391,33 @@ public:
 	 * 8: enable rotation and reflection
 	 */
 	void set_isomorphic(const int& i = 8) { iso_last = i; }
+
+	void dump(const board& b, output& out = info) const {
+		for (int i = 0; i < iso_last; i++) {
+			out << "#" << i << ":" << isomorphic[i].name() << "(";
+			size_t index = isomorphic[i][b];
+			for (int i = 0; i < N; i++) {
+				out << std::hex << ((index >> (4 * i)) & 0x0f);
+			}
+			out << std::dec << ") = " << weight[index] << std::endl;
+		}
+	}
+
 private:
 	struct indexer {
-		int patt[N];
-		void init(int p[N]) { std::copy(p, p + N, patt); }
+		std::array<int, N> patt;
+
 		size_t operator[](const board& b) const {
 			size_t index = 0;
 			for (int i = 0; i < N; i++)
 				index |= b.at(patt[i]) << (4 * i);
 			return index;
 		}
+
 		std::string name() const {
 			std::stringstream ss;
 			ss << std::hex;
-			for (int i = 0; i < N; i++)
-				ss << patt[i];
+			std::copy(patt.begin(), patt.end(), std::ostream_iterator<int>(ss, ""));
 			return ss.str();
 		}
 	};
@@ -496,19 +515,9 @@ public:
 	}
 
 	/**
-	 * find a feature by its name, return nullptr if not found
-	 */
-	feature* find_feature(const std::string& name) const {
-		for (feature* feat : feats)
-			if (feat->name() == name)
-				return feat;
-		return nullptr;
-	}
-
-	/**
 	 * accumulate the total value of given state
 	 */
-	float estimate(const board& b) {
+	float estimate(const board& b) const {
 		debug << "estimate " << std::endl << b;
 		float value = 0;
 		for (feature* feat : feats)
@@ -519,7 +528,7 @@ public:
 	/**
 	 * update the value of given state and return its new value
 	 */
-	float update(const board& b, const float& update) {
+	float update(const board& b, const float& update) const {
 		debug << "update " << " (" << update << ")" << std::endl << b;
 		float value = 0;
 		for (feature* feat : feats)
@@ -539,7 +548,7 @@ public:
 	 *
 	 * you may simply return state() if no valid move
 	 */
-	state select_best_move(const board& b) {
+	state select_best_move(const board& b) const {
 		state after[4] = { 0, 1, 2, 3 }; // up, right, down, left
 		state* best = after;
 		for (state* move = after; move != after + 4; move++) {
@@ -568,7 +577,7 @@ public:
 	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,s2,x,-1) }
 	 *  where (x,x,x,x) means (before state, after state, action, reward)
 	 */
-	void update_episode(std::vector<state>& path, const float& alpha = 0.001) {
+	void update_episode(std::vector<state>& path, const float& alpha = 0.001) const {
 		float exact = 0;
 		for (path.pop_back(); path.size(); path.pop_back()) {
 			state& move = path.back();
@@ -614,6 +623,14 @@ public:
 			}
 			scores.clear();
 			maxtile.clear();
+		}
+	}
+
+	void dump(const board& b, output& out = info) const {
+		out << b << "estimate = " << estimate(b) << std::endl;
+		for (feature* feat : feats) {
+			out << feat->name() << std::endl;
+			feat->dump(b, out);
 		}
 	}
 
