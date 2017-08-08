@@ -331,8 +331,9 @@ public:
 		}
 		va_end(ap);
 
+		// make isomorphic patterns
 		int isopatt[N];
-		for (int i = 0; i < 8; i++) { // rotate and mirror the pattern
+		for (int i = 0; i < 8; i++) {
 			board iso = 0xfedcba9876543210ull;
 			if (i >= 4) iso.mirror();
 			iso.rotate(i);
@@ -340,17 +341,6 @@ public:
 				isopatt[n] = iso.at(patt[n]);
 			isomorphic[i].init(isopatt);
 		}
-
-		info << name() << ", size = " << length;
-		size_t usage = length * sizeof(float);
-		if (usage >= (1 << 30)) {
-			info << " (" << (usage >> 30) << "G)";
-		} else if (usage >= (1 << 20)) {
-			info << " (" << (usage >> 20) << "M)";
-		} else if (usage >= (1 << 10)) {
-			info << " (" << (usage >> 10) << "K)";
-		}
-		info << std::endl;
 	}
 	virtual ~pattern() {}
 
@@ -379,7 +369,7 @@ public:
 
 	/*
 	 * set the isomorphic of this pattern
-	 * 0: disable isomorphic
+	 * 1: no isomorphic
 	 * 4: enable rotation
 	 * 8: enable rotation and reflection
 	 */
@@ -481,6 +471,17 @@ public:
 	 */
 	void add_feature(feature* feat) {
 		feats.push_back(feat);
+
+		info << feat->name() << ", size = " << feat->size();
+		size_t usage = feat->size() * sizeof(float);
+		if (usage >= (1 << 30)) {
+			info << " (" << (usage >> 30) << "G)";
+		} else if (usage >= (1 << 20)) {
+			info << " (" << (usage >> 20) << "M)";
+		} else if (usage >= (1 << 10)) {
+			info << " (" << (usage >> 10) << "K)";
+		}
+		info << std::endl;
 	}
 
 	/**
@@ -556,7 +557,7 @@ public:
 	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,s2,x,-1) }
 	 *  where (x,x,x,x) means (before state, after state, action, reward)
 	 */
-	void update_path(std::vector<state>& path, const float& alpha = 0.001) {
+	void update_episode(std::vector<state>& path, const float& alpha = 0.001) {
 		float exact = 0;
 		for (path.pop_back(); path.size(); path.pop_back()) {
 			state& move = path.back();
@@ -605,7 +606,7 @@ public:
 	}
 
 	/**
-	 * load the weight table from path
+	 * load the weight table from binary file
 	 * you need to define all the features (add_feature(...)) before call this function
 	 */
 	void load(const std::string& path) {
@@ -627,7 +628,7 @@ public:
 	}
 
 	/**
-	 * save the weight table to path
+	 * save the weight table to binary file
 	 */
 	void save(const std::string& path) {
 		std::ofstream out;
@@ -655,7 +656,7 @@ int main(int argc, const char* argv[]) {
 	learning tdl;
 
 	// initialize the learning parameters
-	float alpha = 0.003125;
+	float alpha = 0.1 / 32;
 	size_t total = 100000;
 	unsigned seed; __asm__ __volatile__ ("rdtsc" : "=a" (seed));
 	info << "alpha = " << alpha << std::endl;
@@ -697,7 +698,7 @@ int main(int argc, const char* argv[]) {
 			}
 		}
 
-		tdl.update_path(path, alpha);
+		tdl.update_episode(path, alpha);
 		tdl.make_statistic(n, b, score);
 		path.clear();
 	}
