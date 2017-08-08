@@ -16,6 +16,7 @@
  */
 #include <iostream>
 #include <algorithm>
+#include <functional>
 #include <vector>
 #include <array>
 #include <limits>
@@ -424,10 +425,6 @@ public:
 	float value() const { return esti; }
 	int reward() const { return score; }
 	int action() const { return opcode; }
-	const char* name() const {
-		static const char* opname[4] = { "up", "right", "down", "left" };
-		return (opcode >= 0 && opcode < 4) ? opname[opcode] : "none";
-	}
 
 	bool assign(const board& b) {
 		debug << "assign " << std::endl << b;
@@ -448,6 +445,11 @@ public:
 			std::exit(1);
 		}
 		return after != before && opcode != -1 && score != -1;
+	}
+
+	const char* name() const {
+		static const char* opname[4] = { "up", "right", "down", "left" };
+		return (opcode >= 0 && opcode < 4) ? opname[opcode] : "none";
 	}
 
     friend std::ostream& operator <<(std::ostream& out, const state& st) {
@@ -571,6 +573,7 @@ public:
 		for (path.pop_back(); path.size(); path.pop_back()) {
 			state& move = path.back();
 			float error = exact - (move.value() - move.reward());
+			debug << "update error = " << error << " for after state" << std::endl << move.after_state();
 			exact = move.reward() + update(move.after_state(), alpha * error);
 		}
 	}
@@ -585,8 +588,8 @@ public:
 			maxtile.back() = std::max(maxtile.back(), b.at(i));
 		}
 
-		// show the training process
 		if (n % unit == 0) {
+			// show the training process
 			if (scores.size() != size_t(unit) || maxtile.size() != size_t(unit)) {
 				error << "wrong statistic size for show statistics" << std::endl;
 				std::exit(2);
@@ -628,9 +631,9 @@ public:
 				error << "unexpected feature count: " << size << " (" << feats.size() << " is expected)" << std::endl;
 				std::exit(1);
 			}
-			for (size_t i = 0; i < size; i++) {
-				in >> *(feats[i]);
-				info << feats[i]->name() << " is loaded from " << path << std::endl;
+			for (feature* feat : feats) {
+				in >> *feat;
+				info << feat->name() << " is loaded from " << path << std::endl;
 			}
 			in.close();
 		}
@@ -645,9 +648,9 @@ public:
 		if (out.is_open()) {
 			size_t size = feats.size();
 			out.write(reinterpret_cast<char*>(&size), sizeof(size));
-			for (size_t i = 0; i < size; i++) {
-				out << *(feats[i]);
-				info << feats[i]->name() << " is saved to " << path << std::endl;
+			for (feature* feat : feats) {
+				out << *feat;
+				info << feat->name() << " is saved to " << path << std::endl;
 			}
 			out.flush();
 			out.close();
