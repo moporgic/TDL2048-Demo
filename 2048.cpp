@@ -1,10 +1,9 @@
 /**
  * Temporal Difference Learning Demo for Game 2048
- * use 'g++ -O3 -o 2048 2048.cpp' to compile the source
+ * use 'g++ -std=c++0x -O3 -g -o 2048 2048.cpp' to compile the source
  *
  * Computer Games and Intelligence (CGI) Lab, NCTU, Taiwan
  * http://www.aigames.nctu.edu.tw/
- * January 2017
  *
  * References:
  * [1] Szubert, Marcin, and Wojciech Jaśkowski. "Temporal difference learning of n-tuple networks for the game 2048."
@@ -53,20 +52,18 @@ public:
  */
 class board {
 public:
-	typedef unsigned long long value_t;
-
-	board(const value_t& raw = 0) : raw(raw) {}
+	board(const uint64_t& raw = 0) : raw(raw) {}
 	board(const board& b) = default;
 	board& operator =(const board& b) = default;
-	operator value_t&() { return raw; }
+	operator uint64_t&() { return raw; }
 	bool operator ==(const board& b) const { return raw == b.raw; }
 	bool operator !=(const board& b) const { return raw != b.raw; }
 
 
 	int  fetch(const int& i) const { return ((raw >> (i << 4)) & 0xffff); }
-	void place(const int& i, const int& r) { raw = (raw & ~(0xffffULL << (i << 4))) | (value_t(r & 0xffff) << (i << 4)); }
+	void place(const int& i, const int& r) { raw = (raw & ~(0xffffULL << (i << 4))) | (uint64_t(r & 0xffff) << (i << 4)); }
 	int  at(const int& i) const { return (raw >> (i << 2)) & 0x0f; }
-	void set(const int& i, const int& t) { raw = (raw & ~(0x0fULL << (i << 2))) | (value_t(t & 0x0f) << (i << 2)); }
+	void set(const int& i, const int& t) { raw = (raw & ~(0x0fULL << (i << 2))) | (uint64_t(t & 0x0f) << (i << 2)); }
 
 private:
 	struct lookup {
@@ -89,13 +86,13 @@ private:
 			right = ((R[0] << 0) | (R[1] << 4) | (R[2] << 8) | (R[3] << 12));
 		}
 
-		void move_left(value_t& raw, int& sc, const int& i) const {
-			raw |= value_t(left) << (i << 4);
+		void move_left(uint64_t& raw, int& sc, const int& i) const {
+			raw |= uint64_t(left) << (i << 4);
 			sc += score;
 		}
 
-		void move_right(value_t& raw, int& sc, const int& i) const {
-			raw |= value_t(right) << (i << 4);
+		void move_right(uint64_t& raw, int& sc, const int& i) const {
+			raw |= uint64_t(right) << (i << 4);
 			sc += score;
 		}
 
@@ -139,8 +136,8 @@ private:
 
 public:
 	int move_left() {
-		value_t move = 0;
-		value_t prev = raw;
+		uint64_t move = 0;
+		uint64_t prev = raw;
 		int score = 0;
 		lookup::find(fetch(0)).move_left(move, score, 0);
 		lookup::find(fetch(1)).move_left(move, score, 1);
@@ -150,8 +147,8 @@ public:
 		return (move != prev) ? score : -1;
 	}
 	int move_right() {
-		value_t move = 0;
-		value_t prev = raw;
+		uint64_t move = 0;
+		uint64_t prev = raw;
 		int score = 0;
 		lookup::find(fetch(0)).move_right(move, score, 0);
 		lookup::find(fetch(1)).move_right(move, score, 1);
@@ -236,7 +233,7 @@ public:
 	}
 
 private:
-	value_t raw;
+	uint64_t raw;
 };
 
 /**
