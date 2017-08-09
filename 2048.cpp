@@ -21,7 +21,6 @@
 #include <array>
 #include <limits>
 #include <numeric>
-#include <cstdarg>
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -428,36 +427,28 @@ protected:
  * 12 13 14 15
  *
  * usage:
- *  pattern<4>(0, 1, 2, 3)
- *  pattern<6>(0, 1, 2, 3, 4, 5)
+ *  pattern({ 0, 1, 2, 3 })
+ *  pattern({ 0, 1, 2, 3, 4, 5 })
  */
-template<int N>
 class pattern : public feature {
 public:
-	pattern(int t0, ...) : feature(1 << (N * 4)), iso_last(8) {
-		std::array<int, N>& patt = isomorphic[0];
-
-		va_list ap;
-		va_start(ap, t0);
-		patt[0] = t0;
-		for (int n = 1; n < N; n++) {
-			patt[n] = va_arg(ap, int);
+	pattern(const std::vector<int>& p, const int& iso = 8) : feature(1 << (p.size() * 4)), iso_last(iso) {
+		if (p.empty()) {
+			error << "no pattern defined" << std::endl;
+			std::exit(1);
 		}
-		va_end(ap);
 
-		// make isomorphic patterns
-		for (int i = 1; i < 8; i++) {
-			board iso = 0xfedcba9876543210ull;
-			if (i >= 4) iso.mirror();
-			iso.rotate(i);
-			for (int n = 0; n < N; n++)
-				isomorphic[i][n] = iso.at(patt[n]);
+		for (int i = 0; i < 8; i++) {
+			board idx = 0xfedcba9876543210ull;
+			if (i >= 4) idx.mirror();
+			idx.rotate(i);
+			for (int t : p)
+				isomorphic[i].push_back(idx.at(t));
 		}
 	}
-	pattern(pattern<N>&& p) : feature(p), isomorphic(p.isomorphic), iso_last(p.iso_last) {}
-	pattern(const pattern<N>& p) = delete;
+	pattern(const pattern& p) = delete;
 	virtual ~pattern() {}
-	pattern<N>& operator =(const pattern<N>& p) = delete;
+	pattern& operator =(const pattern& p) = delete;
 
 public:
 
@@ -492,7 +483,7 @@ public:
 	 * get the name of this feature
 	 */
 	virtual std::string name() const {
-		return std::to_string(N) + "-tuple pattern " + nameof(isomorphic[0]);
+		return std::to_string(isomorphic[0].size()) + "-tuple pattern " + nameof(isomorphic[0]);
 	}
 
 public:
@@ -512,7 +503,7 @@ public:
 		for (int i = 0; i < iso_last; i++) {
 			out << "#" << i << ":" << nameof(isomorphic[i]) << "(";
 			size_t index = indexof(isomorphic[i], b);
-			for (int i = 0; i < N; i++) {
+			for (size_t i = 0; i < isomorphic[i].size(); i++) {
 				out << std::hex << ((index >> (4 * i)) & 0x0f);
 			}
 			out << std::dec << ") = " << operator[](index) << std::endl;
@@ -521,21 +512,21 @@ public:
 
 protected:
 
-	size_t indexof(const std::array<int, N>& patt, const board& b) const {
+	size_t indexof(const std::vector<int>& patt, const board& b) const {
 		size_t index = 0;
-		for (int i = 0; i < N; i++)
+		for (size_t i = 0; i < patt.size(); i++)
 			index |= b.at(patt[i]) << (4 * i);
 		return index;
 	}
 
-	std::string nameof(const std::array<int, N>& patt) const {
+	std::string nameof(const std::vector<int>& patt) const {
 		std::stringstream ss;
 		ss << std::hex;
 		std::copy(patt.cbegin(), patt.cend(), std::ostream_iterator<int>(ss, ""));
 		return ss.str();
 	}
 
-	std::array<std::array<int, N>, 8> isomorphic;
+	std::array<std::vector<int>, 8> isomorphic;
 	int iso_last;
 };
 
@@ -852,10 +843,10 @@ int main(int argc, const char* argv[]) {
 	std::srand(seed);
 
 	// initialize the features
-	tdl.add_feature(new pattern<6>(0, 1, 2, 3, 4, 5));
-	tdl.add_feature(new pattern<6>(4, 5, 6, 7, 8, 9));
-	tdl.add_feature(new pattern<6>(0, 1, 2, 4, 5, 6));
-	tdl.add_feature(new pattern<6>(4, 5, 6, 8, 9, 10));
+	tdl.add_feature(new pattern({ 0, 1, 2, 3, 4, 5 }));
+	tdl.add_feature(new pattern({ 4, 5, 6, 7, 8, 9 }));
+	tdl.add_feature(new pattern({ 0, 1, 2, 4, 5, 6 }));
+	tdl.add_feature(new pattern({ 4, 5, 6, 8, 9, 10 }));
 
 	// restore the model from file
 	tdl.load("");
