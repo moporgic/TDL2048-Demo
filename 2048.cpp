@@ -74,13 +74,19 @@ public:
 	board(const board& b) = default;
 	board& operator =(const board& b) = default;
 	operator uint64_t() const { return raw; }
-	bool operator ==(const board& b) const { return raw == b.raw; }
-	bool operator !=(const board& b) const { return raw != b.raw; }
 
 	int  fetch(const int& i) const { return ((raw >> (i << 4)) & 0xffff); }
 	void place(const int& i, const int& r) { raw = (raw & ~(0xffffULL << (i << 4))) | (uint64_t(r & 0xffff) << (i << 4)); }
 	int  at(const int& i) const { return (raw >> (i << 2)) & 0x0f; }
 	void set(const int& i, const int& t) { raw = (raw & ~(0x0fULL << (i << 2))) | (uint64_t(t & 0x0f) << (i << 2)); }
+
+public:
+	bool operator ==(const board& b) const { return raw == b.raw; }
+	bool operator < (const board& b) const { return raw <  b.raw; }
+	bool operator !=(const board& b) const { return !(*this == b); }
+	bool operator > (const board& b) const { return b < *this; }
+	bool operator <=(const board& b) const { return !(b < *this); }
+	bool operator >=(const board& b) const { return !(*this < b); }
 
 private:
 	struct lookup {
@@ -469,24 +475,39 @@ public:
 	state(const state& st) = default;
 	state& operator =(const state& st) = default;
 
+public:
 	board after_state() const { return after; }
 	board before_state() const { return before; }
 	float value() const { return esti; }
 	int reward() const { return score; }
 	int action() const { return opcode; }
 
+	void set_before_state(const board& b) { before = b; }
+	void set_after_state(const board& b) { after = b; }
+	void set_value(const float& v) { esti = v; }
+	void set_reward(const int& r) { score = r; }
+	void set_action(const int& a) { opcode = a; }
+
+public:
+	bool operator ==(const state& s) const {
+		return (opcode == s.opcode) && (before == s.before) && (after == s.after) && (esti == s.esti) && (score == s.score);
+	}
+	bool operator < (const state& s) const {
+		if (before != s.before) throw std::invalid_argument("state::operator<");
+		return esti < s.esti;
+	}
+	bool operator !=(const state& s) const { return !(*this == s); }
+	bool operator > (const state& s) const { return s < *this; }
+	bool operator <=(const state& s) const { return !(s < *this); }
+	bool operator >=(const state& s) const { return !(*this < s); }
+
+public:
 	bool assign(const board& b) {
 		debug << "assign " << std::endl << b;
 		after = before = b;
 		score = after.move(opcode);
 		return score != -1;
 	}
-
-	void set_before_state(const board& b) { before = b; }
-	void set_after_state(const board& b) { after = b; }
-	void set_value(const float& v) { esti = v; }
-	void set_reward(const int& r) { score = r; }
-	void set_action(const int& a) { opcode = a; }
 
 	bool is_valid() const {
 		if (std::isnan(esti)) {
