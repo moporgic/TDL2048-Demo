@@ -45,10 +45,12 @@ public:
 		if (enable) out << pf;
 		return *this;
 	}
+	void set_enable(const bool& en = true) { enable = en; }
+	bool is_enabled() const { return enable; }
 } info(std::cout, true), error(std::cerr, true), debug(std::cout, false);
 
 /**
- * The simplest bitboard implementation for 2048 board
+ * 64-bit bitboard implementation for 2048
  *
  * index:
  *  0  1  2  3
@@ -56,7 +58,7 @@ public:
  *  8  9 10 11
  * 12 13 14 15
  *
- * note that the 64-bit raw value is little endian
+ * note that the 64-bit value is little endian
  * therefore a board with raw value 0x4312752186532731 would be
  * +------------------------+
  * |     2     8   128     4|
@@ -71,7 +73,7 @@ public:
 	board(const uint64_t& raw = 0) : raw(raw) {}
 	board(const board& b) = default;
 	board& operator =(const board& b) = default;
-	operator uint64_t&() { return raw; }
+	operator uint64_t() const { return raw; }
 	bool operator ==(const board& b) const { return raw == b.raw; }
 	bool operator !=(const board& b) const { return raw != b.raw; }
 
