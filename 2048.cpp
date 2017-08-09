@@ -49,6 +49,22 @@ public:
 
 /**
  * The simplest bitboard implementation for 2048 board
+ *
+ * index:
+ *  0  1  2  3
+ *  4  5  6  7
+ *  8  9 10 11
+ * 12 13 14 15
+ *
+ * note that the 64-bit raw value is little endian
+ * therefore a board with raw value 0x4312752186532731 would be
+ * +------------------------+
+ * |     2     8   128     4|
+ * |     8    32    64   256|
+ * |     2     4    32   128|
+ * |     4     2     8    16|
+ * +------------------------+
+ *
  */
 class board {
 public:
@@ -58,7 +74,6 @@ public:
 	operator uint64_t&() { return raw; }
 	bool operator ==(const board& b) const { return raw == b.raw; }
 	bool operator !=(const board& b) const { return raw != b.raw; }
-
 
 	int  fetch(const int& i) const { return ((raw >> (i << 4)) & 0xffff); }
 	void place(const int& i, const int& r) { raw = (raw & ~(0xffffULL << (i << 4))) | (uint64_t(r & 0xffff) << (i << 4)); }
