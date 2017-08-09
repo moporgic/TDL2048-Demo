@@ -710,8 +710,9 @@ public:
 	 * the last entry in path (path.back()) is the final state
 	 *
 	 * for example, a 2048 games consists of
-	 *  (initial) s0 --(a0,r0)--> s0' --(popup)--> s1 --(a1,r1)--> s1' --(popup)--> s2 (game over)
+	 *  (initial) s0 --(a0,r0)--> s0' --(popup)--> s1 --(a1,r1)--> s1' --(popup)--> s2 (terminal)
 	 *  where sx is before state, sx' is after state
+	 *
 	 * its path would be
 	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,s2,x,-1) }
 	 *  where (x,x,x,x) means (before state, after state, action, reward)
