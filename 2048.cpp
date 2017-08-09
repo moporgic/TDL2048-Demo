@@ -345,7 +345,7 @@ public: // should be implemented
 	/**
 	 * update the value of a given board, and return its updated value
 	 */
-	virtual float update(const board& b, const float& upd) = 0;
+	virtual float update(const board& b, const float& u) = 0;
 	/**
 	 * get the name of this feature
 	 */
@@ -468,12 +468,13 @@ public:
 	/**
 	 * update the value of a given board, and return its updated value
 	 */
-	virtual float update(const board& b, const float& v) {
-		debug << name() << " update: " << v << std::endl << b;
+	virtual float update(const board& b, const float& u) {
+		debug << name() << " update: " << u << std::endl << b;
+		float u_split = u / iso_last;
 		float value = 0;
 		for (int i = 0; i < iso_last; i++) {
 			size_t index = indexof(isomorphic[i], b);
-			operator[](index) += v;
+			operator[](index) += u_split;
 			value += operator[](index);
 		}
 		return value;
@@ -658,11 +659,12 @@ public:
 	/**
 	 * update the value of given state and return its new value
 	 */
-	float update(const board& b, const float& update) const {
-		debug << "update " << " (" << update << ")" << std::endl << b;
+	float update(const board& b, const float& u) const {
+		debug << "update " << " (" << u << ")" << std::endl << b;
+		float u_split = u / feats.size();
 		float value = 0;
 		for (feature* feat : feats)
-			value += feat->update(b, update);
+			value += feat->update(b, u_split);
 		return value;
 	}
 
@@ -708,7 +710,7 @@ public:
 	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,s2,x,-1) }
 	 *  where (x,x,x,x) means (before state, after state, action, reward)
 	 */
-	void update_episode(std::vector<state>& path, const float& alpha = 0.001) const {
+	void update_episode(std::vector<state>& path, const float& alpha = 0.1) const {
 		float exact = 0;
 		for (path.pop_back(); path.size(); path.pop_back()) {
 			state& move = path.back();
@@ -834,7 +836,7 @@ int main(int argc, const char* argv[]) {
 	learning tdl;
 
 	// set the learning parameters
-	float alpha = 0.1 / 32;
+	float alpha = 0.1;
 	size_t total = 100000;
 	unsigned seed; __asm__ __volatile__ ("rdtsc" : "=a" (seed));
 	info << "alpha = " << alpha << std::endl;
