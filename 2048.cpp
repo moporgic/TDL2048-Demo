@@ -245,10 +245,34 @@ public:
 	feature(feature&& f) : length(f.length), weight(f.weight) { f.weight = nullptr; }
 	feature(const feature& f) = delete;
 	feature& operator =(const feature& f) = delete;
-
 	virtual ~feature() { delete[] weight; }
 	float& operator[] (const size_t& i) { return weight[i]; }
+	float operator[] (const size_t& i) const { return weight[i]; }
 	size_t size() const { return length; }
+
+public: // should be implemented
+
+	/**
+	 * estimate the value of a given board
+	 */
+	virtual float estimate(const board& b) const = 0;
+	/**
+	 * update the value of a given board, and return its updated value
+	 */
+	virtual float update(const board& b, const float& upd) = 0;
+	/**
+	 * get the name of this feature
+	 */
+	virtual std::string name() const = 0;
+
+public:
+
+	/**
+	 * dump the detail of weight table of a given board
+	 */
+	virtual void dump(const board& b, output& out = info) const {
+		out << b << "estimate = " << estimate(b) << std::endl;
+	}
 
 	friend std::ostream& operator <<(std::ostream& out, const feature& w) {
 		std::string name = w.name();
@@ -261,6 +285,7 @@ public:
 		out.write(reinterpret_cast<char*>(weight), sizeof(float) * size);
 		return out;
 	}
+
 	friend std::istream& operator >>(std::istream& in, feature& w) {
 		std::string name;
 		int len = 0;
@@ -286,14 +311,6 @@ public:
 		}
 		return in;
 	}
-
-public: // should be implemented
-	virtual float estimate(const board& b) = 0;
-	virtual float update(const board& b, const float& upd) = 0;
-	virtual std::string name() const = 0;
-
-public:
-	virtual void dump(const board& b, output& out = info) const {}
 
 protected:
 	static float* alloc(size_t num) {
@@ -331,6 +348,8 @@ template<int N>
 class pattern : public feature {
 public:
 	pattern(int t0, ...) : feature(1 << (N * 4)), iso_last(8) {
+		std::array<int, N>& patt = isomorphic[0];
+
 		va_list ap;
 		va_start(ap, t0);
 		patt[0] = t0;
@@ -340,43 +359,44 @@ public:
 		va_end(ap);
 
 		// make isomorphic patterns
-		std::array<int, N> isopatt;
-		for (int i = 0; i < 8; i++) {
+		for (int i = 1; i < 8; i++) {
 			board iso = 0xfedcba9876543210ull;
 			if (i >= 4) iso.mirror();
 			iso.rotate(i);
 			for (int n = 0; n < N; n++)
-				isopatt[n] = iso.at(patt[n]);
-			isomorphic[i].patt = isopatt;
+				isomorphic[i][n] = iso.at(patt[n]);
 		}
 	}
-	pattern(pattern<N>&& p) : feature(p), patt(p.patt), isomorphic(p.isomorphic), iso_last(p.iso_last) {}
+	pattern(pattern<N>&& p) : feature(p), isomorphic(p.isomorphic), iso_last(p.iso_last) {}
 	pattern(const pattern<N>& p) = delete;
 	virtual ~pattern() {}
 	pattern<N>& operator =(const pattern<N>& p) = delete;
 
 public:
-	virtual float estimate(const board& b) {
+
+	virtual float estimate(const board& b) const {
 		debug << name() << " estimate: " << std::endl << b;
 		float value = 0;
-		for (int i = 0; i < iso_last; i++)
-			value += (operator [](isomorphic[i][b]));
+		for (int i = 0; i < iso_last; i++) {
+			size_t index = indexof(isomorphic[i], b);
+			value += operator[](index);
+		}
 		return value;
 	}
+
 	virtual float update(const board& b, const float& v) {
-		debug << name() << " update: " << v << std::endl;
+		debug << name() << " update: " << v << std::endl << b;
 		float value = 0;
-		for (int i = 0; i < iso_last; i++)
-			value += (operator [](isomorphic[i][b]) += v);
+		for (int i = 0; i < iso_last; i++) {
+			size_t index = indexof(isomorphic[i], b);
+			operator[](index) += v;
+			value += operator[](index);
+		}
 		return value;
 	}
 
 	virtual std::string name() const {
-		std::stringstream ss;
-		ss << N << "-tuple pattern " << std::hex;
-		for (int i = 0; i < N; i++)
-			ss << patt[i];
-		return ss.str();
+		return std::to_string(N) + "-tuple pattern " + nameof(isomorphic[0]);
 	}
 
 public:
@@ -391,36 +411,32 @@ public:
 
 	void dump(const board& b, output& out = info) const {
 		for (int i = 0; i < iso_last; i++) {
-			out << "#" << i << ":" << isomorphic[i].name() << "(";
-			size_t index = isomorphic[i][b];
+			out << "#" << i << ":" << nameof(isomorphic[i]) << "(";
+			size_t index = indexof(isomorphic[i], b);
 			for (int i = 0; i < N; i++) {
 				out << std::hex << ((index >> (4 * i)) & 0x0f);
 			}
-			out << std::dec << ") = " << weight[index] << std::endl;
+			out << std::dec << ") = " << operator[](index) << std::endl;
 		}
 	}
 
-private:
-	struct indexer {
-		std::array<int, N> patt;
+protected:
 
-		size_t operator[](const board& b) const {
-			size_t index = 0;
-			for (int i = 0; i < N; i++)
-				index |= b.at(patt[i]) << (4 * i);
-			return index;
-		}
+	size_t indexof(const std::array<int, N>& patt, const board& b) const {
+		size_t index = 0;
+		for (int i = 0; i < N; i++)
+			index |= b.at(patt[i]) << (4 * i);
+		return index;
+	}
 
-		std::string name() const {
-			std::stringstream ss;
-			ss << std::hex;
-			std::copy(patt.begin(), patt.end(), std::ostream_iterator<int>(ss, ""));
-			return ss.str();
-		}
-	};
+	std::string nameof(const std::array<int, N>& patt) const {
+		std::stringstream ss;
+		ss << std::hex;
+		std::copy(patt.cbegin(), patt.cend(), std::ostream_iterator<int>(ss, ""));
+		return ss.str();
+	}
 
-	std::array<int, N> patt;
-	std::array<indexer, 8> isomorphic;
+	std::array<std::array<int, N>, 8> isomorphic;
 	int iso_last;
 };
 
@@ -491,10 +507,10 @@ public:
 	~learning() {}
 
 	/**
-	 * add a feature into n-tuple networks
+	 * add a feature into tuple networks
 	 *
 	 * note that feats is std::vector<feature*>,
-	 * therefore you need to keep all the instances of features
+	 * therefore you need to keep all the instances somewhere
 	 */
 	void add_feature(feature* feat) {
 		feats.push_back(feat);
@@ -600,13 +616,13 @@ public:
 				error << "wrong statistic size for show statistics" << std::endl;
 				std::exit(2);
 			}
-			float sum = std::accumulate(scores.begin(), scores.end(), 0);
+			int sum = std::accumulate(scores.begin(), scores.end(), 0);
 			int max = *std::max_element(scores.begin(), scores.end());
 			int stat[16] = { 0 };
 			for (int i = 0; i < 16; i++) {
 				stat[i] = std::count(maxtile.begin(), maxtile.end(), i);
 			}
-			float mean = sum / unit;
+			float mean = float(sum) / unit;
 			float coef = 100.0 / unit;
 			info << n;
 			info << "\t" "mean = " << mean;
@@ -623,6 +639,9 @@ public:
 		}
 	}
 
+	/**
+	 * display the weight information of a given board
+	 */
 	void dump(const board& b, output& out = info) const {
 		out << b << "estimate = " << estimate(b) << std::endl;
 		for (feature* feat : feats) {
@@ -694,7 +713,7 @@ int main(int argc, const char* argv[]) {
 	tdl.add_feature(new pattern<6>(0, 1, 2, 3, 4, 5));
 	tdl.add_feature(new pattern<6>(4, 5, 6, 7, 8, 9));
 	tdl.add_feature(new pattern<6>(0, 1, 2, 4, 5, 6));
-	tdl.add_feature(new pattern<6>(4, 5, 6, 8, 9,10));
+	tdl.add_feature(new pattern<6>(4, 5, 6, 8, 9, 10));
 
 	// restore the model from file
 	tdl.load("");
