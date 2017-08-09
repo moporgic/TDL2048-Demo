@@ -75,9 +75,21 @@ public:
 	board& operator =(const board& b) = default;
 	operator uint64_t() const { return raw; }
 
+	/**
+	 * get a 16-bit row
+	 */
 	int  fetch(const int& i) const { return ((raw >> (i << 4)) & 0xffff); }
+	/**
+	 * set a 16-bit row
+	 */
 	void place(const int& i, const int& r) { raw = (raw & ~(0xffffULL << (i << 4))) | (uint64_t(r & 0xffff) << (i << 4)); }
+	/**
+	 * get a 4-bit tile
+	 */
 	int  at(const int& i) const { return (raw >> (i << 2)) & 0x0f; }
+	/**
+	 * set a 4-bit tile
+	 */
 	void set(const int& i, const int& t) { raw = (raw & ~(0x0fULL << (i << 2))) | (uint64_t(t & 0x0f) << (i << 2)); }
 
 public:
@@ -89,6 +101,9 @@ public:
 	bool operator >=(const board& b) const { return !(*this < b); }
 
 private:
+	/**
+	 * the lookup table for moving board
+	 */
 	struct lookup {
 		int raw; // base row (16-bit raw)
 		int left; // left operation
@@ -158,6 +173,41 @@ private:
 	};
 
 public:
+
+	/**
+	 * reset to initial state (2 random tile on board)
+	 */
+	void init() { raw = 0; popup(); popup(); }
+
+	/**
+	 * add a new random tile on board, or do nothing if the board is full
+	 * 2-tile: 90%
+	 * 4-tile: 10%
+	 */
+	void popup() {
+		int space[16], num = 0;
+		for (int i = 0; i < 16; i++)
+			if (at(i) == 0) {
+				space[num++] = i;
+			}
+		if (num)
+			set(space[rand() % num], rand() % 10 ? 1 : 2);
+	}
+
+	/**
+	 * apply an action to the board
+	 * return the reward gained by the action, or -1 if the action is illegal
+	 */
+	int move(const int& opcode) {
+		switch (opcode) {
+		case 0: return move_up();
+		case 1: return move_right();
+		case 2: return move_down();
+		case 3: return move_left();
+		default: return -1;
+		}
+	}
+
 	int move_left() {
 		uint64_t move = 0;
 		uint64_t prev = raw;
@@ -192,33 +242,52 @@ public:
 		rotate_left();
 		return score;
 	}
-	int move(const int& opcode) {
-		switch (opcode) {
-		case 0: return move_up();
-		case 1: return move_right();
-		case 2: return move_down();
-		case 3: return move_left();
-		default: return -1;
-		}
-	}
 
+	/**
+	 * swap row and column
+	 * +------------------------+       +------------------------+
+	 * |     2     8   128     4|       |     2     8     2     4|
+	 * |     8    32    64   256|       |     8    32     4     2|
+	 * |     2     4    32   128| ----> |   128    64    32     8|
+	 * |     4     2     8    16|       |     4   256   128    16|
+	 * +------------------------+       +------------------------+
+	 */
 	void transpose() {
 		raw = (raw & 0xf0f00f0ff0f00f0fULL) | ((raw & 0x0000f0f00000f0f0ULL) << 12) | ((raw & 0x0f0f00000f0f0000ULL) >> 12);
 		raw = (raw & 0xff00ff0000ff00ffULL) | ((raw & 0x00000000ff00ff00ULL) << 24) | ((raw & 0x00ff00ff00000000ULL) >> 24);
 	}
+
+	/**
+	 * horizontal reflection
+	 * +------------------------+       +------------------------+
+	 * |     2     8   128     4|       |     4   128     8     2|
+	 * |     8    32    64   256|       |   256    64    32     8|
+	 * |     2     4    32   128| ----> |   128    32     4     2|
+	 * |     4     2     8    16|       |    16     8     2     4|
+	 * +------------------------+       +------------------------+
+	 */
 	void mirror() {
 		raw = ((raw & 0x000f000f000f000fULL) << 12) | ((raw & 0x00f000f000f000f0ULL) << 4)
 			| ((raw & 0x0f000f000f000f00ULL) >> 4) | ((raw & 0xf000f000f000f000ULL) >> 12);
 	}
+
+	/**
+	 * vertical reflection
+	 * +------------------------+       +------------------------+
+	 * |     2     8   128     4|       |     4     2     8    16|
+	 * |     8    32    64   256|       |     2     4    32   128|
+	 * |     2     4    32   128| ----> |     8    32    64   256|
+	 * |     4     2     8    16|       |     2     8   128     4|
+	 * +------------------------+       +------------------------+
+	 */
 	void flip() {
 		raw = ((raw & 0x000000000000ffffULL) << 48) | ((raw & 0x00000000ffff0000ULL) << 16)
 			| ((raw & 0x0000ffff00000000ULL) >> 16) | ((raw & 0xffff000000000000ULL) >> 48);
 	}
 
-	void rotate_right() { transpose(); mirror(); } // clockwise
-	void rotate_left() { transpose(); flip(); } // counterclockwise
-	void reverse() { mirror(); flip(); }
-
+	/**
+	 * rotate the board clockwise by given times
+	 */
 	void rotate(const int& r = 1) {
 		switch (((r % 4) + 4) % 4) {
 		default:
@@ -229,16 +298,11 @@ public:
 		}
 	}
 
-	void init() { raw = 0; popup(); popup(); }
-	void popup() { // add a new random 2-tile or 4-tile
-		int space[16], num = 0;
-		for (int i = 0; i < 16; i++)
-			if (at(i) == 0) {
-				space[num++] = i;
-			}
-		if (num)
-			set(space[rand() % num], rand() % 10 ? 1 : 2);
-	}
+	void rotate_right() { transpose(); mirror(); } // clockwise
+	void rotate_left() { transpose(); flip(); } // counterclockwise
+	void reverse() { mirror(); flip(); }
+
+public:
 
     friend std::ostream& operator <<(std::ostream& out, const board& b) {
 		char buff[32];
@@ -397,6 +461,9 @@ public:
 
 public:
 
+	/**
+	 * estimate the value of a given board
+	 */
 	virtual float estimate(const board& b) const {
 		debug << name() << " estimate: " << std::endl << b;
 		float value = 0;
@@ -407,6 +474,9 @@ public:
 		return value;
 	}
 
+	/**
+	 * update the value of a given board, and return its updated value
+	 */
 	virtual float update(const board& b, const float& v) {
 		debug << name() << " update: " << v << std::endl << b;
 		float value = 0;
@@ -418,6 +488,9 @@ public:
 		return value;
 	}
 
+	/**
+	 * get the name of this feature
+	 */
 	virtual std::string name() const {
 		return std::to_string(N) + "-tuple pattern " + nameof(isomorphic[0]);
 	}
@@ -432,6 +505,9 @@ public:
 	 */
 	void set_isomorphic(const int& i = 8) { iso_last = i; }
 
+	/**
+	 * display the weight information of a given board
+	 */
 	void dump(const board& b, output& out = info) const {
 		for (int i = 0; i < iso_last; i++) {
 			out << "#" << i << ":" << nameof(isomorphic[i]) << "(";
@@ -502,6 +578,11 @@ public:
 	bool operator >=(const state& s) const { return !(*this < s); }
 
 public:
+
+	/**
+	 * assign a state (before state) to the state, then apply the action (defined in opcode)
+	 * return true if the action is valid for the given state
+	 */
 	bool assign(const board& b) {
 		debug << "assign " << std::endl << b;
 		after = before = b;
@@ -509,6 +590,13 @@ public:
 		return score != -1;
 	}
 
+	/**
+	 * call this function after initialization (assign, set_value, etc)
+	 *
+	 * the state is invalid if
+	 *  estimated value becomes to NaN (wrong learning rate?)
+	 *  invalid action (cause after == before or score == -1)
+	 */
 	bool is_valid() const {
 		if (std::isnan(esti)) {
 			error << "numeric exception" << std::endl;
@@ -639,7 +727,23 @@ public:
 	}
 
 	/**
-	 * update the statistic, and display the status once in several episodes
+	 * update the statistic, and display the status once in 1000 episodes by default
+	 *
+	 * the format would be
+	 * 1000   mean = 273901  max = 382324
+	 *        512    0.3%    (100%)
+	 *       1024    0.2%    (99.7%)
+	 *       2048    1.1%    (99.5%)
+	 *       4096    4.7%    (98.4%)
+	 *       8192    22.4%   (93.7%)
+	 *      16384    71.3%   (71.3%)
+	 *
+	 * where (let unit = 1000)
+	 *  '1000': current iteration (games trained)
+	 *  'mean = 273901': the average score of last 1000 games is 273901
+	 *  'max = 382324': the maximum score of last 1000 games is 382324
+	 *  '22.4%': 22.4% (224 games) ended with 8192-tiles in last 1000 games
+	 *  '93.7%': 93.7% (937 games) reached 8192-tiles in last 1000 games
 	 */
 	void make_statistic(const size_t& n, const board& b, const int& score, const int& unit = 1000) {
 		scores.push_back(score);
@@ -648,8 +752,7 @@ public:
 			maxtile.back() = std::max(maxtile.back(), b.at(i));
 		}
 
-		if (n % unit == 0) {
-			// show the training process
+		if (n % unit == 0) { // show the training process
 			if (scores.size() != size_t(unit) || maxtile.size() != size_t(unit)) {
 				error << "wrong statistic size for show statistics" << std::endl;
 				std::exit(2);
@@ -738,7 +841,7 @@ int main(int argc, const char* argv[]) {
 	info << "TDL2048-Demo" << std::endl;
 	learning tdl;
 
-	// initialize the learning parameters
+	// set the learning parameters
 	float alpha = 0.1 / 32;
 	size_t total = 100000;
 	unsigned seed; __asm__ __volatile__ ("rdtsc" : "=a" (seed));
