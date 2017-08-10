@@ -1,9 +1,10 @@
 /**
  * Temporal Difference Learning Demo for Game 2048
  * use 'g++ -std=c++0x -O3 -g -o 2048 2048.cpp' to compile the source
+ * https://github.com/moporgic/TDL2048-Demo
  *
  * Computer Games and Intelligence (CGI) Lab, NCTU, Taiwan
- * http://www.aigames.nctu.edu.tw/
+ * http://www.aigames.nctu.edu.tw
  *
  * References:
  * [1] Szubert, Marcin, and Wojciech Jaśkowski. "Temporal difference learning of n-tuple networks for the game 2048."
@@ -58,7 +59,7 @@ public:
  * 12 13 14 15
  *
  * note that the 64-bit value is little endian
- * therefore a board with raw value 0x4312752186532731 would be
+ * therefore a board with raw value 0x4312752186532731ull would be
  * +------------------------+
  * |     2     8   128     4|
  * |     8    32    64   256|
@@ -308,7 +309,7 @@ public:
 		out << "+------------------------+" << std::endl;
 		for (int i = 0; i < 16; i += 4) {
 			snprintf(buff, sizeof(buff), "|%6u%6u%6u%6u|",
-				(1 << b.at(i + 0)) & -2u,
+				(1 << b.at(i + 0)) & -2u, // use -2u (0xff...fe) to remove the unnecessary 1 for (1 << 0)
 				(1 << b.at(i + 1)) & -2u,
 				(1 << b.at(i + 2)) & -2u,
 				(1 << b.at(i + 3)) & -2u);
@@ -332,6 +333,7 @@ public:
 	feature(const feature& f) = delete;
 	feature& operator =(const feature& f) = delete;
 	virtual ~feature() { delete[] weight; }
+
 	float& operator[] (const size_t& i) { return weight[i]; }
 	float operator[] (const size_t& i) const { return weight[i]; }
 	size_t size() const { return length; }
@@ -401,7 +403,7 @@ public:
 protected:
 	static float* alloc(size_t num) {
 		static size_t total = 0;
-		static size_t limit = 1 << 30; // 1G memory
+		static size_t limit = (1 << 30) / sizeof(float); // 1G memory
 		try {
 			total += num;
 			if (total > limit) throw std::bad_alloc();
@@ -438,6 +440,24 @@ public:
 			std::exit(1);
 		}
 
+		/**
+		 * isomorphic patterns can be calculated by board
+		 *
+		 * take pattern { 0, 1, 2, 3 } as an example
+		 * apply the pattern to the original board (left), we will get 0x1372
+		 * if we apply the pattern to the clockwise rotated board (right), we will get 0x2131,
+		 * which is the same as applying pattern { 12, 8, 4, 0 } to the original board
+		 * { 0, 1, 2, 3 } and { 12, 8, 4, 0 } are isomorphic patterns
+		 * +------------------------+       +------------------------+
+		 * |     2     8   128     4|       |     4     2     8     2|
+		 * |     8    32    64   256|       |     2     4    32     8|
+		 * |     2     4    32   128| ----> |     8    32    64   128|
+		 * |     4     2     8    16|       |    16   128   256     4|
+		 * +------------------------+       +------------------------+
+		 *
+		 * therefore if we make a board whose value is 0xfedcba9876543210ull (the same as index)
+		 * we would be able to use the above method to calculate its 8 isomorphisms
+		 */
 		for (int i = 0; i < 8; i++) {
 			board idx = 0xfedcba9876543210ull;
 			if (i >= 4) idx.mirror();
@@ -490,7 +510,7 @@ public:
 public:
 
 	/*
-	 * set the isomorphic of this pattern
+	 * set the isomorphic level of this pattern
 	 * 1: no isomorphic
 	 * 4: enable rotation
 	 * 8: enable rotation and reflection
@@ -712,7 +732,7 @@ public:
 	 */
 	void update_episode(std::vector<state>& path, const float& alpha = 0.1) const {
 		float exact = 0;
-		for (path.pop_back(); path.size(); path.pop_back()) {
+		for (path.pop_back() /* terminal state */; path.size(); path.pop_back()) {
 			state& move = path.back();
 			float error = exact - (move.value() - move.reward());
 			debug << "update error = " << error << " for after state" << std::endl << move.after_state();
@@ -725,18 +745,18 @@ public:
 	 *
 	 * the format would be
 	 * 1000   mean = 273901  max = 382324
-	 *        512    0.3%    (100%)
-	 *       1024    0.2%    (99.7%)
-	 *       2048    1.1%    (99.5%)
-	 *       4096    4.7%    (98.4%)
-	 *       8192    22.4%   (93.7%)
-	 *      16384    71.3%   (71.3%)
+	 *        512      0.3%     (100%)
+	 *        1024     0.2%     (99.7%)
+	 *        2048     1.1%     (99.5%)
+	 *        4096     4.7%     (98.4%)
+	 *        8192     22.4%    (93.7%)
+	 *        16384    71.3%    (71.3%)
 	 *
 	 * where (let unit = 1000)
 	 *  '1000': current iteration (games trained)
 	 *  'mean = 273901': the average score of last 1000 games is 273901
 	 *  'max = 382324': the maximum score of last 1000 games is 382324
-	 *  '22.4%': 22.4% (224 games) ended with 8192-tiles in last 1000 games
+	 *  '22.4%': 22.4% (224 games) terminated with 8192-tiles in last 1000 games
 	 *  '93.7%': 93.7% (937 games) reached 8192-tiles in last 1000 games
 	 */
 	void make_statistic(const size_t& n, const board& b, const int& score, const int& unit = 1000) {
