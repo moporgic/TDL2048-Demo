@@ -599,6 +599,7 @@ public:
 		debug << "assign " << std::endl << b;
 		after = before = b;
 		score = after.move(opcode);
+		esti = score;
 		return score != -1;
 	}
 
