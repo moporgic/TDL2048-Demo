@@ -592,7 +592,7 @@ public:
 public:
 
 	/**
-	 * assign a state (before state) to the state, then apply the action (defined in opcode)
+	 * assign a state (before state), then apply the action (defined in opcode)
 	 * return true if the action is valid for the given state
 	 */
 	bool assign(const board& b) {
@@ -657,11 +657,11 @@ public:
 		info << feat->name() << ", size = " << feat->size();
 		size_t usage = feat->size() * sizeof(float);
 		if (usage >= (1 << 30)) {
-			info << " (" << (usage >> 30) << "G)";
+			info << " (" << (usage >> 30) << "GB)";
 		} else if (usage >= (1 << 20)) {
-			info << " (" << (usage >> 20) << "M)";
+			info << " (" << (usage >> 20) << "MB)";
 		} else if (usage >= (1 << 10)) {
-			info << " (" << (usage >> 10) << "K)";
+			info << " (" << (usage >> 10) << "KB)";
 		}
 		info << std::endl;
 	}
