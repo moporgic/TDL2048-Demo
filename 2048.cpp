@@ -787,8 +787,8 @@ public:
 			for (int t = 1, c = 0; c < unit; c += stat[t++]) {
 				if (stat[t] == 0) continue;
 				int accu = std::accumulate(stat + t, stat + 16, 0);
-				info << "\t" << ((1 << t) & -2u) << "\t" << (stat[t] * coef) << "%";
-				info << "\t(" << (accu * coef) << "%)" << std::endl;
+				info << "\t" << ((1 << t) & -2u) << "\t" << (accu * coef) << "%";
+				info << "\t(" << (stat[t] * coef) << "%)" << std::endl;
 			}
 			scores.clear();
 			maxtile.clear();
