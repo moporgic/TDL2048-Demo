@@ -746,19 +746,19 @@ public:
 	 *
 	 * the format would be
 	 * 1000   mean = 273901  max = 382324
-	 *        512      0.3%     (100%)
-	 *        1024     0.2%     (99.7%)
-	 *        2048     1.1%     (99.5%)
-	 *        4096     4.7%     (98.4%)
-	 *        8192     22.4%    (93.7%)
-	 *        16384    71.3%    (71.3%)
+	 *        512     100%   (0.3%)
+	 *        1024    99.7%  (0.2%)
+	 *        2048    99.5%  (1.1%)
+	 *        4096    98.4%  (4.7%)
+	 *        8192    93.7%  (22.4%)
+	 *        16384   71.3%  (71.3%)
 	 *
 	 * where (let unit = 1000)
 	 *  '1000': current iteration (games trained)
 	 *  'mean = 273901': the average score of last 1000 games is 273901
 	 *  'max = 382324': the maximum score of last 1000 games is 382324
-	 *  '22.4%': 22.4% (224 games) terminated with 8192-tiles in last 1000 games
-	 *  '93.7%': 93.7% (937 games) reached 8192-tiles in last 1000 games
+	 *  '93.7%': 93.7% (937 games) reached 8192-tiles in last 1000 games (a.k.a. win rate of 8192-tile)
+	 *  '22.4%': 22.4% (224 games) terminated with 8192-tiles (the largest) in last 1000 games
 	 */
 	void make_statistic(const size_t& n, const board& b, const int& score, const int& unit = 1000) {
 		scores.push_back(score);
