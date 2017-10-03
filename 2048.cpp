@@ -136,12 +136,12 @@ public:
 
     friend std::ostream& operator <<(std::ostream& out, const board& b) {
 		char buff[32];
-		out << "+--------+" << std::endl;
-		std::snprintf(buff, sizeof(buff), "|%4u%4u|", (1 << b[0][0]) & -2u, (1 << b[0][1]) & -2u);
+		out << "+------+" << std::endl;
+		std::snprintf(buff, sizeof(buff), "|%3u%3u|", (1 << b[0][0]) & -2u, (1 << b[0][1]) & -2u);
 		out << buff << std::endl;
-		std::snprintf(buff, sizeof(buff), "|%4u%4u|", (1 << b[1][0]) & -2u, (1 << b[1][1]) & -2u);
+		std::snprintf(buff, sizeof(buff), "|%3u%3u|", (1 << b[1][0]) & -2u, (1 << b[1][1]) & -2u);
 		out << buff << std::endl;
-		out << "+--------+" << std::endl;
+		out << "+------+" << std::endl;
 		return out;
 	}
 
@@ -154,11 +154,17 @@ private:
 int main(int argc, const char* argv[]) {
 	std::srand(std::time(nullptr));
 
-	float V[65536] = { 0 };
+	float weight[6 * 6 * 6 * 6] = { 0 };
+	auto V = [&](const board& b) -> float& {
+		return weight[ (b[0][0] * 6 * 6 * 6) + (b[0][1] * 6 * 6) + (b[1][0] * 6) + (b[1][1]) ];
+	};
 
-	float alpha = 0.1;
+	float alpha = 0.01;
 	int decimal = 4;
-	bool iso = true;
+	int isomorphic = 8;
+
+	bool forward = true;
+	bool backward = false;
 
 	auto norm = [=](const float& v) {
 		double base = std::pow(10, decimal);
@@ -168,7 +174,11 @@ int main(int argc, const char* argv[]) {
 	std::vector<board> history; history.reserve(100);
 	std::vector<int> actions; actions.reserve(50);
 
-	auto append_board_at = [&](std::string buff[4], int i) {
+	auto make_display_buff = []() -> std::array<std::string, 4> { return { "+", "|", "|", "+" }; };
+	auto display_buff = [](std::array<std::string, 4>& buff) {
+		for (std::string& line : buff) std::cout << line << std::endl;
+	};
+	auto append_board_at = [&](std::array<std::string, 4>& buff, int i) {
 		board b = history[i];
 		std::stringstream ss;
 		ss << b;
@@ -176,23 +186,23 @@ int main(int argc, const char* argv[]) {
 		for (int i = 0; i < 4 && std::getline(ss, line); i++)
 			buff[i] += line.substr(1);
 		if (i % 2) {
+			int off = 2;
 			std::string n_ = b.name();
-			buff[3][buff[3].size() - 8] = '[';
-			buff[3][buff[3].size() - 3] = ']';
-			std::copy_n(n_.begin(), n_.size(), buff[3].begin() + (buff[3].size() - 7));
+			buff[3][buff[3].size() - (off+5)] = '[';
+			buff[3][buff[3].size() - (off)] = ']';
+			std::copy_n(n_.begin(), n_.size(), buff[3].begin() + (buff[3].size() - (off+4)));
 
 			b = history[i - 1];
 			int r = b.move(actions[i / 2]);
 			std::string r_ = std::to_string(r);
-			buff[0][buff[0].size() - r_.size() - 5] = '(';
-			buff[0][buff[0].size() - r_.size() - 4] = '+';
-			buff[0][buff[0].size() - 3] = ')';
-			std::copy_n(r_.begin(), r_.size(), buff[0].begin() + (buff[0].size() - r_.size() - 3));
+			buff[0][buff[0].size() - r_.size() - (off+2)] = '(';
+			buff[0][buff[0].size() - r_.size() - (off+1)] = '+';
+			buff[0][buff[0].size() - (off)] = ')';
+			std::copy_n(r_.begin(), r_.size(), buff[0].begin() + (buff[0].size() - r_.size() - (off)));
 		}
 	};
 
-	auto append_action_at = [&](std::string buff[4], int k) {
-		board b = history[k - 1];
+	auto append_action_at = [&](std::array<std::string, 4>& buff, board b, int x) {
 		board a[4] = { b, b, b, b };
 		int r[4] = { -1 };
 		for (int op = 0; op < 4; op++) {
@@ -200,13 +210,27 @@ int main(int argc, const char* argv[]) {
 		}
 		std::string opname[] = { "^", ">", "v", "<" };
 		for (int i = 0; i < 4; i++) {
-			std::cout << buff[i] << " " << opname[i] << ": " << r[i];
+			std::stringstream ss;
+			ss << buff[i] << " " << opname[i] << ": ";
 			if (r[i] != -1) {
-				std::cout << " + " << norm(V[a[i]]);
-				if (int(a[i]) == int(history[k])) std::cout << " *";
-				std::cout << std::endl;
+				ss << r[i] << " + " << norm(V(a[i]));
+				if (i == x) ss << " *";
 			} else {
-				std::cout << std::endl;
+				ss << "n/a";
+			}
+			buff[i] = ss.str();
+		}
+	};
+
+	auto train_isomorphic = [&](const board& b, float upd) {
+		std::vector<int> trained;
+		trained.reserve(8);
+		for (int i = 0; i < isomorphic; i++) {
+			board iso = b;
+			iso.isomorphic(i);
+			if (std::find(trained.begin(), trained.end(), iso) == trained.end()) {
+				trained.push_back(iso);
+				V(iso) += upd;
 			}
 		}
 	};
@@ -227,71 +251,75 @@ int main(int argc, const char* argv[]) {
 			for (int op = 0; op < 4; op++) {
 				r[op] = a[op].move(op);
 				if (r[op] != -1) {
-					v[op] = r[op] + V[a[op]];
+					v[op] = r[op] + V(a[op]);
 					if (v[op] > v[x]) x = op;
 				}
 			}
+
+			if (print) {
+				auto buff = make_display_buff();
+				for (size_t i = 0; i < history.size(); i++) {
+					append_board_at(buff, i);
+				}
+				append_action_at(buff, b, x);
+				display_buff(buff);
+			}
+
+			if (forward && history.size() > 1) {
+				float exact = r[x] != -1 ? v[x] : 0;
+				float& u = V(history[history.size() - 2]);
+				auto upd = alpha * (exact - u);
+				int rwd = r[x] != -1 ? r[x] : 0;
+//				auto& v = V(history[history.size() - 2]);
+
+				if (print) {
+					std::cout << "TD(0): V(" << history[history.size() - 2].name() << ") = ";
+					std::cout << norm(u) << " + ";
+					std::cout << alpha << " * (" << rwd << " + " << norm(exact - rwd) << " - " << norm(u) << ") = ";
+					std::cout << norm(u + upd) << std::endl;
+				}
+
+				train_isomorphic(history[history.size() - 2], upd);
+
+			} else if (forward) {
+				if (print) {
+					std::cout << "TD(0): n/a" << std::endl;
+				}
+			}
+
 			if (r[x] == -1) break;
 			b = a[x];
 			history.push_back(b);
 			actions.push_back(x);
 		}
-		if (print) {
-			for (size_t k = 1; k < history.size(); k += 2) {
-				std::string buff[4] = { "+", "|", "|", "+" };
-				for (size_t i = 0; i < k; i++) {
-					append_board_at(buff, i);
-				}
-				append_action_at(buff, k);
-			}
-			std::string buff[4] = { "+", "|", "|", "+" };
-			for (size_t i = 0; i < history.size(); i++) {
-				append_board_at(buff, i);
-			}
-			for (std::string& line : buff) {
-				std::cout << line << std::endl;
-			}
-		}
 
-		float exact = 0;
-		history.pop_back();
-		while (history.size()) {
-			auto& v = V[history.back()];
-			auto upd = alpha * (exact - v);
-			if (print) {
-				std::cout << "v[" << history.back().name() << "] is " << norm(v);
-				std::cout << ", should be " << norm(exact) << ": ";
-				if (norm(v) != norm(exact)) {
-					std::cout << "v[" << history.back().name() << "] = ";
-					std::cout << norm(v) << " + " << alpha << " * (" << norm(exact) << " - " << norm(v) << ") = ";
+		if (backward) {
+			int r = 0;
+			float exact = 0;
+			history.pop_back();
+			while (history.size()) {
+				auto& v = V(history.back());
+				auto upd = alpha * (exact - v);
+
+				if (print) {
+					std::cout << "TD(0): V(" << history.back().name() << ") = ";
+					std::cout << norm(v) << " + " << alpha << " * (" << r << " + " << norm(exact - r) << " - " << norm(v) << ") = ";
 					std::cout << norm(v + upd) << std::endl;
-				} else {
-					std::cout << "correct" << std::endl;
 				}
+
+				train_isomorphic(history.back(), upd);
+
+				history.pop_back();
+				r = board(history.back()).move(actions.back());
+				exact = v + r;
+				history.pop_back();
+				actions.pop_back();
 			}
-			v += upd;
-			if (iso) {
-				std::vector<int> trained;
-				trained.reserve(8);
-				board a = history.back();
-				trained.push_back(a);
-				for (int i = 1; i < 8; i++) {
-					board iso = a;
-					iso.isomorphic(i);
-					if (std::find(trained.begin(), trained.end(), iso) == trained.end()) {
-						trained.push_back(iso);
-						V[iso] += upd;
-					}
-				}
-			}
-			exact = v;
-			history.pop_back();
-			exact += board(history.back()).move(actions.back());
-			history.pop_back();
-			actions.pop_back();
 		}
 
 		if (!bypass) std::getchar();
+		history.clear();
+		actions.clear();
 	}
 
 	return 0;
