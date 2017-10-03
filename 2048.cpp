@@ -161,10 +161,33 @@ int main(int argc, const char* argv[]) {
 
 	float alpha = 0.01;
 	int decimal = 4;
-	int isomorphic = 8;
-
+	int isomorphic = 1;
 	bool forward = true;
-	bool backward = false;
+	for (int i = 1; i < argc; i++) {
+		std::string arg(argv[i]);
+		if (arg.find("--forward") == 0 || arg.find("-f") == 0) {
+			forward = true;
+		} else if (arg.find("--backward") == 0 || arg.find("-b") == 0) {
+			forward = false;
+		} else if (arg.find("--isomorphic") == 0 || arg.find("-i") == 0) {
+			isomorphic = 8;
+		} else {
+			std::string value;
+			if (arg.find("=") != std::string::npos) {
+				value = arg.substr(arg.find("=") + 1);
+			} else {
+				value = argv[++i];
+			}
+			if (arg.find("--alpha") == 0 || arg.find("-a") == 0) {
+				alpha = std::stod(value);
+			} else if (arg.find("--decimal") == 0 || arg.find("-d") == 0) {
+				decimal = std::stoi(value);
+			}
+		}
+	}
+
+	auto is_forward = [=]() { return forward; };
+	auto is_backward = [=]() { return !forward; };
 
 	auto norm = [=](const float& v) {
 		double base = std::pow(10, decimal);
@@ -265,7 +288,7 @@ int main(int argc, const char* argv[]) {
 				display_buff(buff);
 			}
 
-			if (forward && history.size() > 1) {
+			if (is_forward() && history.size() > 1) {
 				float exact = r[x] != -1 ? v[x] : 0;
 				float& u = V(history[history.size() - 2]);
 				auto upd = alpha * (exact - u);
@@ -281,7 +304,7 @@ int main(int argc, const char* argv[]) {
 
 				train_isomorphic(history[history.size() - 2], upd);
 
-			} else if (forward) {
+			} else if (is_forward()) {
 				if (print) {
 					std::cout << "TD(0): n/a" << std::endl;
 				}
@@ -293,7 +316,7 @@ int main(int argc, const char* argv[]) {
 			actions.push_back(x);
 		}
 
-		if (backward) {
+		if (is_backward()) {
 			int r = 0;
 			float exact = 0;
 			history.pop_back();
