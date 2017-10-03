@@ -155,14 +155,68 @@ int main(int argc, const char* argv[]) {
 	std::srand(std::time(nullptr));
 
 	float weight[6 * 6 * 6 * 6] = { 0 };
-	auto V = [&](const board& b) -> float& {
-		return weight[ (b[0][0] * 6 * 6 * 6) + (b[0][1] * 6 * 6) + (b[1][0] * 6) + (b[1][1]) ];
+	auto indexof = [](const board& b) {
+		return (b[0][0] * 6 * 6 * 6) + (b[0][1] * 6 * 6) + (b[1][0] * 6) + (b[1][1]);
 	};
+	auto V = [&](const board& b) -> float& {
+		return weight[indexof(b)];
+	};
+
+	float wexact[6 * 6 * 6 * 6];
+	auto E = [&](const board& b) -> float& {
+		return wexact[indexof(b)];
+	};
+
+	std::fill(std::begin(wexact), std::end(wexact), -1);
+	std::vector<board> probe; probe.reserve(500);
+	probe.emplace_back(0);
+	for (size_t n = 0; n < probe.size(); n++) {
+		board a = probe[n];
+		for (int i = 0; i < 4; i++) {
+			if (a[i/2][i%2] != 0) continue;
+			board b = a;
+			int popup[] = { 1, 2 };
+			for (int t : popup) {
+				b[i/2][i%2] = t;
+				for (int op = 0; op < 4; op++) {
+					board ba = b;
+					if (ba.move(op) != -1 && std::find(probe.begin() + n, probe.end(), ba) == probe.end()) {
+						probe.push_back(ba);
+					}
+				}
+			}
+		}
+	}
+	while (probe.size()) {
+		board a = probe.back();
+		probe.pop_back();
+		if (wexact[indexof(a)] >= 0) continue;
+		float v_a = 0;
+		float n_sp = 0;
+		for (int i = 0; i < 4; i++) {
+			if (a[i/2][i%2] != 0) continue;
+			board b = a;
+			float v_b[] = { 0, 0 };
+			for (int p = 1; p <= 2; p++) {
+				b[i/2][i%2] = p;
+				float& v = v_b[p - 1];
+				for (int op = 0; op < 4; op++) {
+					board ba = b;
+					int r = ba.move(op);
+					if (r != -1) v = std::max(r + wexact[indexof(ba)], v);
+				}
+			}
+			v_a += 9 * v_b[0] + 1 * v_b[1];
+			n_sp += 10;
+		}
+		wexact[indexof(a)] = v_a / n_sp;
+	}
 
 	float alpha = 0.01;
 	int decimal = 4;
 	int isomorphic = 1;
 	bool forward = true;
+	bool showexpt = false;
 	for (int i = 1; i < argc; i++) {
 		std::string arg(argv[i]);
 		if (arg.find("--forward") == 0 || arg.find("-f") == 0) {
@@ -171,6 +225,8 @@ int main(int argc, const char* argv[]) {
 			forward = false;
 		} else if (arg.find("--isomorphic") == 0 || arg.find("-i") == 0) {
 			isomorphic = 8;
+		} else if (arg.find("--expected") == 0 || arg.find("-e") == 0) {
+			showexpt = true;
 		} else {
 			std::string value;
 			if (arg.find("=") != std::string::npos) {
@@ -228,16 +284,26 @@ int main(int argc, const char* argv[]) {
 	auto append_action_at = [&](std::array<std::string, 4>& buff, board b, int x) {
 		board a[4] = { b, b, b, b };
 		int r[4] = { -1 };
+		float ev[4];
 		for (int op = 0; op < 4; op++) {
 			r[op] = a[op].move(op);
+			ev[op] = r[op];
+			if (r[op] != -1) ev[op] += E(a[op]);
 		}
+		int xx = std::max_element(ev, ev + 4) - ev;
+
 		std::string opname[] = { "^", ">", "v", "<" };
 		for (int i = 0; i < 4; i++) {
 			std::stringstream ss;
 			ss << buff[i] << " " << opname[i] << ": ";
 			if (r[i] != -1) {
 				ss << r[i] << " + " << norm(V(a[i]));
-				if (i == x) ss << " *";
+				if (showexpt && ev[x] != ev[xx]) {
+					if (i == x) ss << " x";
+					if (i ==xx) ss << " *";
+				} else {
+					if (i == x) ss << " *";
+				}
 			} else {
 				ss << "n/a";
 			}
@@ -296,10 +362,13 @@ int main(int argc, const char* argv[]) {
 //				auto& v = V(history[history.size() - 2]);
 
 				if (print) {
-					std::cout << "TD(0): V(" << history[history.size() - 2].name() << ") = ";
+					board last = history[history.size() - 2];
+					std::cout << "TD(0): V(" << last.name() << ") = ";
 					std::cout << norm(u) << " + ";
 					std::cout << alpha << " * (" << rwd << " + " << norm(exact - rwd) << " - " << norm(u) << ") = ";
-					std::cout << norm(u + upd) << std::endl;
+					std::cout << norm(u + upd);
+					if (showexpt) std::cout << ", V* = " << norm(E(last));
+					std::cout << std::endl;
 				}
 
 				train_isomorphic(history[history.size() - 2], upd);
@@ -327,7 +396,9 @@ int main(int argc, const char* argv[]) {
 				if (print) {
 					std::cout << "TD(0): V(" << history.back().name() << ") = ";
 					std::cout << norm(v) << " + " << alpha << " * (" << r << " + " << norm(exact - r) << " - " << norm(v) << ") = ";
-					std::cout << norm(v + upd) << std::endl;
+					std::cout << norm(v + upd);
+					if (showexpt) std::cout << ", V* = " << norm(E(history.back()));
+					std::cout << std::endl;
 				}
 
 				train_isomorphic(history.back(), upd);
