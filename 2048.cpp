@@ -21,6 +21,7 @@
 #include <ctime>
 #include <cmath>
 #include <functional>
+#include <numeric>
 
 class board {
 public:
@@ -107,6 +108,12 @@ public:
 		}
 	}
 
+	void isomorphic(const int& i) {
+		int iso = ((i % 8) + 8) % 8;
+		if (iso > 4) mirror();
+		rotate(iso);
+	}
+
 	void next() {
 		int space[4], num = 0;
 		if (tile[0][0] == 0) space[num++] = 0;
@@ -142,21 +149,73 @@ private:
 	std::array<std::array<int, 2>, 2> tile;
 };
 
+
+
 int main(int argc, const char* argv[]) {
 	std::srand(std::time(nullptr));
 
+	float V[65536] = { 0 };
+
 	float alpha = 0.1;
 	int decimal = 4;
+	bool iso = true;
 
-	float V[65536] = { 0 };
+	auto norm = [=](const float& v) {
+		double base = std::pow(10, decimal);
+		return std::round(v * base) / base;
+	};
+
+	std::vector<board> history; history.reserve(100);
+	std::vector<int> actions; actions.reserve(50);
+
+	auto append_board_at = [&](std::string buff[4], int i) {
+		board b = history[i];
+		std::stringstream ss;
+		ss << b;
+		std::string line;
+		for (int i = 0; i < 4 && std::getline(ss, line); i++)
+			buff[i] += line.substr(1);
+		if (i % 2) {
+			std::string n_ = b.name();
+			buff[3][buff[3].size() - 8] = '[';
+			buff[3][buff[3].size() - 3] = ']';
+			std::copy_n(n_.begin(), n_.size(), buff[3].begin() + (buff[3].size() - 7));
+
+			b = history[i - 1];
+			int r = b.move(actions[i / 2]);
+			std::string r_ = std::to_string(r);
+			buff[0][buff[0].size() - r_.size() - 5] = '(';
+			buff[0][buff[0].size() - r_.size() - 4] = '+';
+			buff[0][buff[0].size() - 3] = ')';
+			std::copy_n(r_.begin(), r_.size(), buff[0].begin() + (buff[0].size() - r_.size() - 3));
+		}
+	};
+
+	auto append_action_at = [&](std::string buff[4], int k) {
+		board b = history[k - 1];
+		board a[4] = { b, b, b, b };
+		int r[4] = { -1 };
+		for (int op = 0; op < 4; op++) {
+			r[op] = a[op].move(op);
+		}
+		std::string opname[] = { "^", ">", "v", "<" };
+		for (int i = 0; i < 4; i++) {
+			std::cout << buff[i] << " " << opname[i] << ": " << r[i];
+			if (r[i] != -1) {
+				std::cout << " + " << norm(V[a[i]]);
+				if (int(a[i]) == int(history[k])) std::cout << " *";
+				std::cout << std::endl;
+			} else {
+				std::cout << std::endl;
+			}
+		}
+	};
 
 	for (size_t i = 1; true; i++) {
 		bool print = true;
 		bool bypass = false;
 
 		if (print) std::cout << "episode #" << i << ":" << std::endl;
-		std::vector<board> history;
-		std::vector<int> actions;
 		board b;
 		while (true) {
 			b.next();
@@ -164,9 +223,13 @@ int main(int argc, const char* argv[]) {
 			int x = 0;
 			board a[4] = { b, b, b, b };
 			int r[4] = { -1 };
+			float v[4] = { -std::numeric_limits<float>::max() };
 			for (int op = 0; op < 4; op++) {
 				r[op] = a[op].move(op);
-				if (r[op] > r[x]) x = op;
+				if (r[op] != -1) {
+					v[op] = r[op] + V[a[op]];
+					if (v[op] > v[x]) x = op;
+				}
 			}
 			if (r[x] == -1) break;
 			b = a[x];
@@ -174,57 +237,54 @@ int main(int argc, const char* argv[]) {
 			actions.push_back(x);
 		}
 		if (print) {
-			int s = 0;
+			for (size_t k = 1; k < history.size(); k += 2) {
+				std::string buff[4] = { "+", "|", "|", "+" };
+				for (size_t i = 0; i < k; i++) {
+					append_board_at(buff, i);
+				}
+				append_action_at(buff, k);
+			}
 			std::string buff[4] = { "+", "|", "|", "+" };
 			for (size_t i = 0; i < history.size(); i++) {
-				board b = history[i];
-				std::stringstream ss;
-				ss << b;
-				std::string line;
-				for (int i = 0; i < 4 && std::getline(ss, line); i++)
-					buff[i] += line.substr(1);
-				if (i % 2) {
-					std::string n_ = b.name();
-					buff[3][buff[3].size() - 8] = '[';
-					buff[3][buff[3].size() - 3] = ']';
-					std::copy_n(n_.begin(), n_.size(), buff[3].begin() + (buff[3].size() - 7));
-
-					b = history[i - 1];
-					int r = b.move(actions[i / 2]);
-					s += r;
-					std::string r_ = std::to_string(r);
-					buff[0][buff[0].size() - r_.size() - 5] = '(';
-					buff[0][buff[0].size() - r_.size() - 4] = '+';
-					buff[0][buff[0].size() - 3] = ')';
-					std::copy_n(r_.begin(), r_.size(), buff[0].begin() + (buff[0].size() - r_.size() - 3));
-				}
+				append_board_at(buff, i);
 			}
 			for (std::string& line : buff) {
 				std::cout << line << std::endl;
 			}
 		}
 
-		auto norm = [=](const float& v) {
-			double base = std::pow(10, decimal);
-			return std::round(v * base) / base;
-		};
-
 		float exact = 0;
 		history.pop_back();
 		while (history.size()) {
 			auto& v = V[history.back()];
+			auto upd = alpha * (exact - v);
 			if (print) {
 				std::cout << "v[" << history.back().name() << "] is " << norm(v);
 				std::cout << ", should be " << norm(exact) << ": ";
 				if (norm(v) != norm(exact)) {
 					std::cout << "v[" << history.back().name() << "] = ";
 					std::cout << norm(v) << " + " << alpha << " * (" << norm(exact) << " - " << norm(v) << ") = ";
-					std::cout << norm(v + 0.1 * (exact - v)) << std::endl;
+					std::cout << norm(v + upd) << std::endl;
 				} else {
 					std::cout << "correct" << std::endl;
 				}
 			}
-			exact = (v += alpha * (exact - v));
+			v += upd;
+			if (iso) {
+				std::vector<int> trained;
+				trained.reserve(8);
+				board a = history.back();
+				trained.push_back(a);
+				for (int i = 1; i < 8; i++) {
+					board iso = a;
+					iso.isomorphic(i);
+					if (std::find(trained.begin(), trained.end(), iso) == trained.end()) {
+						trained.push_back(iso);
+						V[iso] += upd;
+					}
+				}
+			}
+			exact = v;
 			history.pop_back();
 			exact += board(history.back()).move(actions.back());
 			history.pop_back();
