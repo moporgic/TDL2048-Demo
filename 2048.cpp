@@ -215,8 +215,11 @@ int main(int argc, const char* argv[]) {
 	float alpha = 0.01;
 	int decimal = 4;
 	int isomorphic = 1;
+	size_t total = std::numeric_limits<size_t>::max();
 	bool forward = true;
 	bool showexpt = false;
+	bool bypass = false;
+
 	for (int i = 1; i < argc; i++) {
 		std::string arg(argv[i]);
 		if (arg.find("--forward") == 0 || arg.find("-f") == 0) {
@@ -227,6 +230,8 @@ int main(int argc, const char* argv[]) {
 			isomorphic = 8;
 		} else if (arg.find("--expected") == 0 || arg.find("-e") == 0) {
 			showexpt = true;
+		} else if (arg.find("--bypass") == 0 || arg.find("-y") == 0) {
+			bypass = true;
 		} else {
 			std::string value;
 			if (arg.find("=") != std::string::npos) {
@@ -234,7 +239,9 @@ int main(int argc, const char* argv[]) {
 			} else {
 				value = argv[++i];
 			}
-			if (arg.find("--alpha") == 0 || arg.find("-a") == 0) {
+			if (arg.find("--total") == 0 || arg.find("-t") == 0) {
+				total = std::stoull(value);
+			} else if (arg.find("--alpha") == 0 || arg.find("-a") == 0) {
 				alpha = std::stod(value);
 			} else if (arg.find("--decimal") == 0 || arg.find("-d") == 0) {
 				decimal = std::stoi(value);
@@ -324,9 +331,8 @@ int main(int argc, const char* argv[]) {
 		}
 	};
 
-	for (size_t i = 1; true; i++) {
+	for (size_t i = 1; i > 0 && i <= total; i++) {
 		bool print = true;
-		bool bypass = false;
 
 		if (print) std::cout << "episode #" << i << ":" << std::endl;
 		board b;
