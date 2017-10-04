@@ -152,8 +152,6 @@ private:
 
 
 int main(int argc, const char* argv[]) {
-	std::srand(std::time(nullptr));
-
 	float weight[6 * 6 * 6 * 6] = { 0 };
 	auto indexof = [](const board& b) {
 		return (b[0][0] * 6 * 6 * 6) + (b[0][1] * 6 * 6) + (b[1][0] * 6) + (b[1][1]);
@@ -219,6 +217,7 @@ int main(int argc, const char* argv[]) {
 	bool forward = true;
 	bool showexpt = false;
 	bool bypass = false;
+	int seed = std::time(nullptr);
 
 	for (int i = 1; i < argc; i++) {
 		std::string arg(argv[i]);
@@ -245,10 +244,13 @@ int main(int argc, const char* argv[]) {
 				alpha = std::stod(value);
 			} else if (arg.find("--decimal") == 0 || arg.find("-d") == 0) {
 				decimal = std::stoi(value);
+			} else if (arg.find("--seed") == 0 || arg.find("-s") == 0) {
+				seed = std::stoi(value);
 			}
 		}
 	}
 
+	std::srand(seed);
 	auto is_forward = [=]() { return forward; };
 	auto is_backward = [=]() { return !forward; };
 
