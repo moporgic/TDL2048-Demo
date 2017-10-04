@@ -221,7 +221,20 @@ int main(int argc, const char* argv[]) {
 
 	for (int i = 1; i < argc; i++) {
 		std::string arg(argv[i]);
-		if (arg.find("--forward") == 0 || arg.find("-f") == 0) {
+		if (arg.find("--help") == 0 || arg.find("-?") == 0) {
+			std::cout << argv[0] << std::endl;
+			std::cout << "  -?, --help         show this info and exit" << std::endl;
+			std::cout << "  -f, --forward      use forward training" << std::endl;
+			std::cout << "  -b, --backward     use backward training" << std::endl;
+			std::cout << "  -i, --isomorphic   enable isomorphic training" << std::endl;
+			std::cout << "  -e, --expected     show expected value" << std::endl;
+			std::cout << "  -y, --bypass       do not prompt after an episode " << std::endl;
+			std::cout << "  -t, --total=NUM    the number of episodes" << std::endl;
+			std::cout << "  -a, --alpha=NUM    the learning rate" << std::endl;
+			std::cout << "  -d, --decimal=NUM  control the decimal places" << std::endl;
+			std::cout << "  -s, --seed=NUM     set the seed" << std::endl;
+			return 0;
+		} else if (arg.find("--forward") == 0 || arg.find("-f") == 0) {
 			forward = true;
 		} else if (arg.find("--backward") == 0 || arg.find("-b") == 0) {
 			forward = false;
