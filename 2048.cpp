@@ -222,8 +222,8 @@ int main(int argc, const char* argv[]) {
 	for (int i = 1; i < argc; i++) {
 		std::string arg(argv[i]);
 		if (arg.find("--help") == 0 || arg.find("-?") == 0) {
-			std::cout << "usage: " << argv[0] << " [OPTION]..." << std::endl;
-			std::cout << "learn temporal difference learning with 2x2 2048." << std::endl;
+			std::cout << "Usage: " << argv[0] << " [OPTION]..." << std::endl;
+			std::cout << "Learn temporal difference learning with 2x2 2048." << std::endl;
 			std::cout << "  -?, --help         show this info and exit" << std::endl;
 			std::cout << "  -f, --forward      use forward training" << std::endl;
 			std::cout << "  -b, --backward     use backward training" << std::endl;
