@@ -254,7 +254,7 @@ public:
 	 */
 	void mirror() {
 		raw = ((raw & 0x000f000f000f000fULL) << 12) | ((raw & 0x00f000f000f000f0ULL) << 4)
-			| ((raw & 0x0f000f000f000f00ULL) >> 4) | ((raw & 0xf000f000f000f000ULL) >> 12);
+		    | ((raw & 0x0f000f000f000f00ULL) >> 4) | ((raw & 0xf000f000f000f000ULL) >> 12);
 	}
 
 	/**
@@ -268,7 +268,7 @@ public:
 	 */
 	void flip() {
 		raw = ((raw & 0x000000000000ffffULL) << 48) | ((raw & 0x00000000ffff0000ULL) << 16)
-			| ((raw & 0x0000ffff00000000ULL) >> 16) | ((raw & 0xffff000000000000ULL) >> 48);
+		    | ((raw & 0x0000ffff00000000ULL) >> 16) | ((raw & 0xffff000000000000ULL) >> 48);
 	}
 
 	/**
@@ -448,8 +448,9 @@ public:
 			board idx = 0xfedcba9876543210ull;
 			if (i >= 4) idx.mirror();
 			idx.rotate(i);
-			for (int t : p)
+			for (int t : p) {
 				isomorphic[i].push_back(idx.at(t));
+			}
 		}
 	}
 	pattern(const pattern& p) = delete;
@@ -658,8 +659,9 @@ public:
 	float estimate(const board& b) const {
 		debug << "estimate " << std::endl << b;
 		float value = 0;
-		for (feature* feat : feats)
+		for (feature* feat : feats) {
 			value += feat->estimate(b);
+		}
 		return value;
 	}
 
@@ -670,8 +672,9 @@ public:
 		debug << "update " << " (" << u << ")" << std::endl << b;
 		float u_split = u / feats.size();
 		float value = 0;
-		for (feature* feat : feats)
+		for (feature* feat : feats) {
 			value += feat->update(b, u_split);
+		}
 		return value;
 	}
 
@@ -869,6 +872,7 @@ int main(int argc, const char* argv[]) {
 		int score = 0;
 
 		// play an episode
+		debug << "begin episode" << std::endl;
 		b.init();
 		while (true) {
 			debug << "state" << std::endl << b;
@@ -881,11 +885,12 @@ int main(int argc, const char* argv[]) {
 				b = best.after_state();
 				b.popup();
 			} else {
-				debug << "gameover" << std::endl;
 				break;
 			}
 		}
+		debug << "end episode" << std::endl;
 
+		// update by TD(0)
 		tdl.update_episode(path, alpha);
 		tdl.make_statistic(n, b, score);
 		path.clear();
