@@ -28,26 +28,12 @@
 #include <cmath>
 
 /**
- * output stream wrapper
+ * output streams
+ * to enable debugging (more output), just change the line to 'std::ostream& debug = std::cout;'
  */
-class output {
-private:
-	std::ostream& out;
-	bool enable;
-public:
-	output(std::ostream& out, const bool& en = true) : out(out), enable(en) {}
-	template<typename type>
-	output& operator <<(const type& v) {
-		if (enable) out << v;
-		return *this;
-	}
-	output& operator <<(std::ostream& (*pf)(std::ostream&)) {
-		if (enable) out << pf;
-		return *this;
-	}
-	void set_enable(const bool& en = true) { enable = en; }
-	bool is_enabled() const { return enable; }
-} info(std::cout, true), error(std::cerr, true), debug(std::cout, false);
+std::ostream& info = std::cout;
+std::ostream& error = std::cerr;
+std::ostream& debug = *(new std::ofstream);
 
 /**
  * 64-bit bitboard implementation for 2048
@@ -358,7 +344,7 @@ public:
 	/**
 	 * dump the detail of weight table of a given board
 	 */
-	virtual void dump(const board& b, output& out = info) const {
+	virtual void dump(const board& b, std::ostream& out = info) const {
 		out << b << "estimate = " << estimate(b) << std::endl;
 	}
 
@@ -520,7 +506,7 @@ public:
 	/**
 	 * display the weight information of a given board
 	 */
-	void dump(const board& b, output& out = info) const {
+	void dump(const board& b, std::ostream& out = info) const {
 		for (int i = 0; i < iso_last; i++) {
 			out << "#" << i << ":" << nameof(isomorphic[i]) << "(";
 			size_t index = indexof(isomorphic[i], b);
@@ -798,7 +784,7 @@ public:
 	/**
 	 * display the weight information of a given board
 	 */
-	void dump(const board& b, output& out = info) const {
+	void dump(const board& b, std::ostream& out = info) const {
 		out << b << "estimate = " << estimate(b) << std::endl;
 		for (feature* feat : feats) {
 			out << feat->name() << std::endl;
@@ -859,7 +845,8 @@ int main(int argc, const char* argv[]) {
 	// set the learning parameters
 	float alpha = 0.1;
 	size_t total = 100000;
-	unsigned seed; __asm__ __volatile__ ("rdtsc" : "=a" (seed));
+	unsigned seed;
+	__asm__ __volatile__ ("rdtsc" : "=a" (seed));
 	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
 	info << "seed = " << seed << std::endl;
