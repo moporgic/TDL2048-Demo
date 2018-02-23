@@ -30,6 +30,8 @@
 *.exe
 *.out
 *.app
+2048
+2048.exe
 
 # Folders and settings
 /Release
