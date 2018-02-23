@@ -463,7 +463,6 @@ public:
 	 * estimate the value of a given board
 	 */
 	virtual float estimate(const board& b) const {
-		debug << name() << " estimate: " << std::endl << b;
 		float value = 0;
 		for (int i = 0; i < iso_last; i++) {
 			size_t index = indexof(isomorphic[i], b);
@@ -476,7 +475,6 @@ public:
 	 * update the value of a given board, and return its updated value
 	 */
 	virtual float update(const board& b, const float& u) {
-		debug << name() << " update: " << u << std::endl << b;
 		float u_split = u / iso_last;
 		float value = 0;
 		for (int i = 0; i < iso_last; i++) {
@@ -583,7 +581,7 @@ public:
 	 * return true if the action is valid for the given state
 	 */
 	bool assign(const board& b) {
-		debug << "assign " << std::endl << b;
+		debug << "assign " << name() << std::endl << b;
 		after = before = b;
 		score = after.move(opcode);
 		esti = score;
@@ -701,7 +699,7 @@ public:
 			} else {
 				move->set_value(-std::numeric_limits<float>::max());
 			}
-			debug << "try " << *move;
+			debug << "test " << *move;
 		}
 		return *best;
 	}
