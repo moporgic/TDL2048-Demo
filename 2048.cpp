@@ -56,7 +56,7 @@ std::ostream& debug = *(new std::ofstream);
  */
 class board {
 public:
-	board(const uint64_t& raw = 0) : raw(raw) {}
+	board(uint64_t raw = 0) : raw(raw) {}
 	board(const board& b) = default;
 	board& operator =(const board& b) = default;
 	operator uint64_t() const { return raw; }
@@ -64,19 +64,19 @@ public:
 	/**
 	 * get a 16-bit row
 	 */
-	int  fetch(const int& i) const { return ((raw >> (i << 4)) & 0xffff); }
+	int  fetch(int i) const { return ((raw >> (i << 4)) & 0xffff); }
 	/**
 	 * set a 16-bit row
 	 */
-	void place(const int& i, const int& r) { raw = (raw & ~(0xffffULL << (i << 4))) | (uint64_t(r & 0xffff) << (i << 4)); }
+	void place(int i, int r) { raw = (raw & ~(0xffffULL << (i << 4))) | (uint64_t(r & 0xffff) << (i << 4)); }
 	/**
 	 * get a 4-bit tile
 	 */
-	int  at(const int& i) const { return (raw >> (i << 2)) & 0x0f; }
+	int  at(int i) const { return (raw >> (i << 2)) & 0x0f; }
 	/**
 	 * set a 4-bit tile
 	 */
-	void set(const int& i, const int& t) { raw = (raw & ~(0x0fULL << (i << 2))) | (uint64_t(t & 0x0f) << (i << 2)); }
+	void set(int i, int t) { raw = (raw & ~(0x0fULL << (i << 2))) | (uint64_t(t & 0x0f) << (i << 2)); }
 
 public:
 	bool operator ==(const board& b) const { return raw == b.raw; }
@@ -96,7 +96,7 @@ private:
 		int right; // right operation
 		int score; // merge reward
 
-		void init(const int& r) {
+		void init(int r) {
 			raw = r;
 
 			int V[4] = { (r >> 0) & 0x0f, (r >> 4) & 0x0f, (r >> 8) & 0x0f, (r >> 12) & 0x0f };
@@ -110,12 +110,12 @@ private:
 			right = ((R[0] << 0) | (R[1] << 4) | (R[2] << 8) | (R[3] << 12));
 		}
 
-		void move_left(uint64_t& raw, int& sc, const int& i) const {
+		void move_left(uint64_t& raw, int& sc, int i) const {
 			raw |= uint64_t(left) << (i << 4);
 			sc += score;
 		}
 
-		void move_right(uint64_t& raw, int& sc, const int& i) const {
+		void move_right(uint64_t& raw, int& sc, int i) const {
 			raw |= uint64_t(right) << (i << 4);
 			sc += score;
 		}
@@ -152,7 +152,7 @@ private:
 			init(row++);
 		}
 
-		static const lookup& find(const int& row) {
+		static const lookup& find(int row) {
 			static const lookup cache[65536];
 			return cache[row];
 		}
@@ -184,7 +184,7 @@ public:
 	 * apply an action to the board
 	 * return the reward gained by the action, or -1 if the action is illegal
 	 */
-	int move(const int& opcode) {
+	int move(int opcode) {
 		switch (opcode) {
 		case 0: return move_up();
 		case 1: return move_right();
@@ -274,7 +274,7 @@ public:
 	/**
 	 * rotate the board clockwise by given times
 	 */
-	void rotate(const int& r = 1) {
+	void rotate(int r = 1) {
 		switch (((r % 4) + 4) % 4) {
 		default:
 		case 0: break;
@@ -314,14 +314,14 @@ private:
  */
 class feature {
 public:
-	feature(const size_t& len) : length(len), weight(alloc(len)) {}
+	feature(size_t len) : length(len), weight(alloc(len)) {}
 	feature(feature&& f) : length(f.length), weight(f.weight) { f.weight = nullptr; }
 	feature(const feature& f) = delete;
 	feature& operator =(const feature& f) = delete;
 	virtual ~feature() { delete[] weight; }
 
-	float& operator[] (const size_t& i) { return weight[i]; }
-	float operator[] (const size_t& i) const { return weight[i]; }
+	float& operator[] (size_t i) { return weight[i]; }
+	float operator[] (size_t i) const { return weight[i]; }
 	size_t size() const { return length; }
 
 public: // should be implemented
@@ -333,7 +333,7 @@ public: // should be implemented
 	/**
 	 * update the value of a given board, and return its updated value
 	 */
-	virtual float update(const board& b, const float& u) = 0;
+	virtual float update(const board& b, float u) = 0;
 	/**
 	 * get the name of this feature
 	 */
@@ -420,7 +420,7 @@ protected:
  */
 class pattern : public feature {
 public:
-	pattern(const std::vector<int>& p, const int& iso = 8) : feature(1 << (p.size() * 4)), iso_last(iso) {
+	pattern(const std::vector<int>& p, int iso = 8) : feature(1 << (p.size() * 4)), iso_last(iso) {
 		if (p.empty()) {
 			error << "no pattern defined" << std::endl;
 			std::exit(1);
@@ -474,7 +474,7 @@ public:
 	/**
 	 * update the value of a given board, and return its updated value
 	 */
-	virtual float update(const board& b, const float& u) {
+	virtual float update(const board& b, float u) {
 		float u_split = u / iso_last;
 		float value = 0;
 		for (int i = 0; i < iso_last; i++) {
@@ -500,7 +500,7 @@ public:
 	 * 4: enable rotation
 	 * 8: enable rotation and reflection
 	 */
-	void set_isomorphic(const int& i = 8) { iso_last = i; }
+	void set_isomorphic(int i = 8) { iso_last = i; }
 
 	/**
 	 * display the weight information of a given board
@@ -541,9 +541,9 @@ protected:
  */
 class state {
 public:
-	state(const int& opcode = -1)
+	state(int opcode = -1)
 		: opcode(opcode), score(-1), esti(-std::numeric_limits<float>::max()) {}
-	state(const board& b, const int& opcode = -1)
+	state(const board& b, int opcode = -1)
 		: opcode(opcode), score(-1), esti(-std::numeric_limits<float>::max()) { assign(b); }
 	state(const state& st) = default;
 	state& operator =(const state& st) = default;
@@ -557,9 +557,9 @@ public:
 
 	void set_before_state(const board& b) { before = b; }
 	void set_after_state(const board& b) { after = b; }
-	void set_value(const float& v) { esti = v; }
-	void set_reward(const int& r) { score = r; }
-	void set_action(const int& a) { opcode = a; }
+	void set_value(float v) { esti = v; }
+	void set_reward(int r) { score = r; }
+	void set_action(int a) { opcode = a; }
 
 public:
 	bool operator ==(const state& s) const {
@@ -666,7 +666,7 @@ public:
 	/**
 	 * update the value of given state and return its new value
 	 */
-	float update(const board& b, const float& u) const {
+	float update(const board& b, float u) const {
 		debug << "update " << " (" << u << ")" << std::endl << b;
 		float u_split = u / feats.size();
 		float value = 0;
@@ -718,7 +718,7 @@ public:
 	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,s2,x,-1) }
 	 *  where (x,x,x,x) means (before state, after state, action, reward)
 	 */
-	void update_episode(std::vector<state>& path, const float& alpha = 0.1) const {
+	void update_episode(std::vector<state>& path, float alpha = 0.1) const {
 		float exact = 0;
 		for (path.pop_back() /* terminal state */; path.size(); path.pop_back()) {
 			state& move = path.back();
@@ -747,7 +747,7 @@ public:
 	 *  '93.7%': 93.7% (937 games) reached 8192-tiles in last 1000 games (a.k.a. win rate of 8192-tile)
 	 *  '22.4%': 22.4% (224 games) terminated with 8192-tiles (the largest) in last 1000 games
 	 */
-	void make_statistic(const size_t& n, const board& b, const int& score, const int& unit = 1000) {
+	void make_statistic(size_t n, const board& b, int score, int unit = 1000) {
 		scores.push_back(score);
 		maxtile.push_back(0);
 		for (int i = 0; i < 16; i++) {
