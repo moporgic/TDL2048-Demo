@@ -731,7 +731,7 @@ public:
 	/**
 	 * update the statistic, and display the status once in 1000 episodes by default
 	 *
-	 * the format would be
+	 * the format is
 	 * 1000   mean = 273901  max = 382324
 	 *        512     100%   (0.3%)
 	 *        1024    99.7%  (0.2%)
@@ -744,7 +744,7 @@ public:
 	 *  '1000': current iteration (games trained)
 	 *  'mean = 273901': the average score of last 1000 games is 273901
 	 *  'max = 382324': the maximum score of last 1000 games is 382324
-	 *  '93.7%': 93.7% (937 games) reached 8192-tiles in last 1000 games (a.k.a. win rate of 8192-tile)
+	 *  '93.7%': 93.7% (937 games) reached 8192-tiles in last 1000 games, i.e., win rate of 8192-tile
 	 *  '22.4%': 22.4% (224 games) terminated with 8192-tiles (the largest) in last 1000 games
 	 */
 	void make_statistic(size_t n, const board& b, int score, int unit = 1000) {
@@ -852,7 +852,7 @@ int main(int argc, const char* argv[]) {
 	info << "seed = " << seed << std::endl;
 	std::srand(seed);
 
-	// initialize the features
+	// initialize the features of the 4x6-tuple network
 	tdl.add_feature(new pattern({ 0, 1, 2, 3, 4, 5 }));
 	tdl.add_feature(new pattern({ 4, 5, 6, 7, 8, 9 }));
 	tdl.add_feature(new pattern({ 0, 1, 2, 4, 5, 6 }));
