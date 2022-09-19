@@ -34,7 +34,8 @@
 2048.exe
 
 # Folders and settings
+/Default
+/Debug
 /Release
 /.settings
 /.*project
-/Default/
