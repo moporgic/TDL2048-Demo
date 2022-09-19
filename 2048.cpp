@@ -1,5 +1,5 @@
 /**
- * Temporal Difference Learning Demo for Game 2048
+ * Temporal Difference Learning for Game 2048 (Demo)
  * use 'g++ -std=c++11 -O3 -g -o 2048 2048.cpp' to compile the source
  * https://github.com/moporgic/TDL2048-Demo
  *
