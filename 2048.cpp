@@ -420,7 +420,7 @@ protected:
  */
 class pattern : public feature {
 public:
-	pattern(const std::vector<int>& p, int iso = 8) : feature(1 << (p.size() * 4)), iso_last(iso) {
+	pattern(const std::vector<int>& p, int iso = 8) : feature(1 << (p.size() * 4)), isom_last(iso) {
 		if (p.empty()) {
 			error << "no pattern defined" << std::endl;
 			std::exit(1);
@@ -443,13 +443,18 @@ public:
 		 *
 		 * therefore if we make a board whose value is 0xfedcba9876543210ull (the same as index)
 		 * we would be able to use the above method to calculate its 8 isomorphisms
+		 *
+		 * isom_last sets the isomorphic level of this pattern
+		 * 1: no isomorphic
+		 * 4: enable rotation
+		 * 8: enable rotation and reflection
 		 */
 		for (int i = 0; i < 8; i++) {
 			board idx = 0xfedcba9876543210ull;
 			if (i >= 4) idx.mirror();
 			idx.rotate(i);
 			for (int t : p) {
-				isomorphic[i].push_back(idx.at(t));
+				isom[i].push_back(idx.at(t));
 			}
 		}
 	}
@@ -464,8 +469,8 @@ public:
 	 */
 	virtual float estimate(const board& b) const {
 		float value = 0;
-		for (int i = 0; i < iso_last; i++) {
-			size_t index = indexof(isomorphic[i], b);
+		for (int i = 0; i < isom_last; i++) {
+			size_t index = indexof(isom[i], b);
 			value += operator[](index);
 		}
 		return value;
@@ -475,11 +480,11 @@ public:
 	 * update the value of a given board, and return its updated value
 	 */
 	virtual float update(const board& b, float u) {
-		float u_split = u / iso_last;
+		float adjust = u / isom_last;
 		float value = 0;
-		for (int i = 0; i < iso_last; i++) {
-			size_t index = indexof(isomorphic[i], b);
-			operator[](index) += u_split;
+		for (int i = 0; i < isom_last; i++) {
+			size_t index = indexof(isom[i], b);
+			operator[](index) += adjust;
 			value += operator[](index);
 		}
 		return value;
@@ -489,27 +494,19 @@ public:
 	 * get the name of this feature
 	 */
 	virtual std::string name() const {
-		return std::to_string(isomorphic[0].size()) + "-tuple pattern " + nameof(isomorphic[0]);
+		return std::to_string(isom[0].size()) + "-tuple pattern " + nameof(isom[0]);
 	}
 
 public:
-
-	/*
-	 * set the isomorphic level of this pattern
-	 * 1: no isomorphic
-	 * 4: enable rotation
-	 * 8: enable rotation and reflection
-	 */
-	void set_isomorphic(int i = 8) { iso_last = i; }
 
 	/**
 	 * display the weight information of a given board
 	 */
 	void dump(const board& b, std::ostream& out = info) const {
-		for (int i = 0; i < iso_last; i++) {
-			out << "#" << i << ":" << nameof(isomorphic[i]) << "(";
-			size_t index = indexof(isomorphic[i], b);
-			for (size_t i = 0; i < isomorphic[i].size(); i++) {
+		for (int i = 0; i < isom_last; i++) {
+			out << "#" << i << ":" << nameof(isom[i]) << "(";
+			size_t index = indexof(isom[i], b);
+			for (size_t i = 0; i < isom[i].size(); i++) {
 				out << std::hex << ((index >> (4 * i)) & 0x0f);
 			}
 			out << std::dec << ") = " << operator[](index) << std::endl;
@@ -532,68 +529,70 @@ protected:
 		return ss.str();
 	}
 
-	std::array<std::vector<int>, 8> isomorphic;
-	int iso_last;
+	std::array<std::vector<int>, 8> isom;
+	int isom_last;
 };
 
 /**
- * before state and after state wrapper
+ * the move for storing state, action, reward, afterstate, and value
  */
-class state {
+class move {
 public:
-	state(int opcode = -1)
+	move(int opcode = -1)
 		: opcode(opcode), score(-1), esti(-std::numeric_limits<float>::max()) {}
-	state(const board& b, int opcode = -1)
+	move(const board& b, int opcode = -1)
 		: opcode(opcode), score(-1), esti(-std::numeric_limits<float>::max()) { assign(b); }
-	state(const state& st) = default;
-	state& operator =(const state& st) = default;
+	move(const move&) = default;
+	move& operator =(const move&) = default;
 
 public:
-	board after_state() const { return after; }
-	board before_state() const { return before; }
+	board state() const { return before; }
+	board afterstate() const { return after; }
 	float value() const { return esti; }
 	int reward() const { return score; }
 	int action() const { return opcode; }
 
-	void set_before_state(const board& b) { before = b; }
-	void set_after_state(const board& b) { after = b; }
+	void set_state(const board& b) { before = b; }
+	void set_afterstate(const board& b) { after = b; }
 	void set_value(float v) { esti = v; }
 	void set_reward(int r) { score = r; }
 	void set_action(int a) { opcode = a; }
 
 public:
-	bool operator ==(const state& s) const {
+	bool operator ==(const move& s) const {
 		return (opcode == s.opcode) && (before == s.before) && (after == s.after) && (esti == s.esti) && (score == s.score);
 	}
-	bool operator < (const state& s) const {
+	bool operator < (const move& s) const {
 		if (before != s.before) throw std::invalid_argument("state::operator<");
 		return esti < s.esti;
 	}
-	bool operator !=(const state& s) const { return !(*this == s); }
-	bool operator > (const state& s) const { return s < *this; }
-	bool operator <=(const state& s) const { return !(s < *this); }
-	bool operator >=(const state& s) const { return !(*this < s); }
+	bool operator !=(const move& s) const { return !(*this == s); }
+	bool operator > (const move& s) const { return s < *this; }
+	bool operator <=(const move& s) const { return !(s < *this); }
+	bool operator >=(const move& s) const { return !(*this < s); }
 
 public:
 
 	/**
-	 * assign a state (before state), then apply the action (defined in opcode)
+	 * assign a state, then apply the action to generate its afterstate
 	 * return true if the action is valid for the given state
 	 */
 	bool assign(const board& b) {
 		debug << "assign " << name() << std::endl << b;
 		after = before = b;
 		score = after.move(opcode);
-		esti = score;
+		esti = score != -1 ? score : -std::numeric_limits<float>::max();
 		return score != -1;
 	}
 
 	/**
-	 * call this function after initialization (assign, set_value, etc)
+	 * check the move is valid or not
 	 *
-	 * the state is invalid if
+	 * the move is invalid if
 	 *  estimated value becomes to NaN (wrong learning rate?)
 	 *  invalid action (cause after == before or score == -1)
+	 *
+	 * call this function after initialization (assign, set_value, etc)
 	 */
 	bool is_valid() const {
 		if (std::isnan(esti)) {
@@ -608,10 +607,10 @@ public:
 		return (opcode >= 0 && opcode < 4) ? opname[opcode] : "none";
 	}
 
-    friend std::ostream& operator <<(std::ostream& out, const state& st) {
-		out << "moving " << st.name() << ", reward = " << st.score;
-		if (st.is_valid()) {
-			out << ", value = " << st.esti << std::endl << st.after;
+    friend std::ostream& operator <<(std::ostream& out, const move& mv) {
+		out << "moving " << mv.name() << ", reward = " << mv.score;
+		if (mv.is_valid()) {
+			out << ", value = " << mv.esti << std::endl << mv.after;
 		} else {
 			out << " (invalid)" << std::endl;
 		}
@@ -652,7 +651,8 @@ public:
 	}
 
 	/**
-	 * accumulate the total value of given state
+	 * estimate the value of the given state
+	 * by accumulating all corresponding feature weights
 	 */
 	float estimate(const board& b) const {
 		debug << "estimate " << std::endl << b;
@@ -664,75 +664,66 @@ public:
 	}
 
 	/**
-	 * update the value of given state and return its new value
+	 * update the value of the given state and return its new value
 	 */
 	float update(const board& b, float u) const {
 		debug << "update " << " (" << u << ")" << std::endl << b;
-		float u_split = u / feats.size();
+		float adjust = u / feats.size();
 		float value = 0;
 		for (feature* feat : feats) {
-			value += feat->update(b, u_split);
+			value += feat->update(b, adjust);
 		}
 		return value;
 	}
 
 	/**
-	 * select a best move of a before state b
+	 * select the best move of a state b
 	 *
-	 * return should be a state whose
-	 *  before_state() is b
-	 *  after_state() is b's best successor (after state)
+	 * return should be a move whose
+	 *  state() is b
+	 *  afterstate() is its best afterstate
 	 *  action() is the best action
-	 *  reward() is the reward of performing action()
-	 *  value() is the estimated value of after_state()
-	 *
-	 * you may simply return state() if no valid move
+	 *  reward() is the reward of this action
+	 *  value() is the estimated value of this move
 	 */
-	state select_best_move(const board& b) const {
-		state after[4] = { 0, 1, 2, 3 }; // up, right, down, left
-		state* best = after;
-		for (state* move = after; move != after + 4; move++) {
-			if (move->assign(b)) {
-				move->set_value(move->reward() + estimate(move->after_state()));
-				if (move->value() > best->value())
-					best = move;
-			} else {
-				move->set_value(-std::numeric_limits<float>::max());
+	move select_best_move(const board& b) const {
+		move best(b);
+		move moves[4] = { move(b, 0), move(b, 1), move(b, 2), move(b, 3) };
+		for (move& move : moves) {
+			if (move.is_valid()) {
+				move.set_value(move.reward() + estimate(move.afterstate()));
+				if (move.value() > best.value()) best = move;
 			}
-			debug << "test " << *move;
+			debug << "test " << move;
 		}
-		return *best;
+		return best;
 	}
 
 	/**
-	 * update the tuple network by an episode
+	 * learn from the records in an episode
 	 *
-	 * path is the sequence of states in this episode,
-	 * the last entry in path (path.back()) is the final state
-	 *
-	 * for example, a 2048 games consists of
+	 * an episode with a total of 3 states consists of
 	 *  (initial) s0 --(a0,r0)--> s0' --(popup)--> s1 --(a1,r1)--> s1' --(popup)--> s2 (terminal)
-	 *  where sx is before state, sx' is after state
 	 *
-	 * its path would be
-	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,s2,x,-1) }
-	 *  where (x,x,x,x) means (before state, after state, action, reward)
+	 * the path for this game contains 3 records as follows
+	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,x,x,x) }
+	 *  note that the last record contains only a terminal state
 	 */
-	void update_episode(std::vector<state>& path, float alpha = 0.1) const {
-		float exact = 0;
+	void learn_from_episode(std::vector<move>& path, float alpha = 0.1) const {
+		float target = 0;
 		for (path.pop_back() /* terminal state */; path.size(); path.pop_back()) {
-			state& move = path.back();
-			float error = exact - (move.value() - move.reward());
-			debug << "update error = " << error << " for after state" << std::endl << move.after_state();
-			exact = move.reward() + update(move.after_state(), alpha * error);
+			move& move = path.back();
+			float error = target - estimate(move.afterstate());
+			target = move.reward() + update(move.afterstate(), alpha * error);
+			debug << "update error = " << error << " for" << std::endl << move.afterstate();
 		}
 	}
 
 	/**
-	 * update the statistic, and display the status once in 1000 episodes by default
+	 * update the statistic, and show the statistic every 1000 episodes by default
 	 *
 	 * the format is
-	 * 1000   mean = 273901  max = 382324
+	 * 1000   avg = 273901  max = 382324
 	 *        512     100%   (0.3%)
 	 *        1024    99.7%  (0.2%)
 	 *        2048    99.5%  (1.1%)
@@ -740,9 +731,9 @@ public:
 	 *        8192    93.7%  (22.4%)
 	 *        16384   71.3%  (71.3%)
 	 *
-	 * where (let unit = 1000)
+	 * where (when unit = 1000)
 	 *  '1000': current iteration (games trained)
-	 *  'mean = 273901': the average score of last 1000 games is 273901
+	 *  'avg = 273901': the average score of last 1000 games is 273901
 	 *  'max = 382324': the maximum score of last 1000 games is 382324
 	 *  '93.7%': 93.7% (937 games) reached 8192-tiles in last 1000 games, i.e., win rate of 8192-tile
 	 *  '22.4%': 22.4% (224 games) terminated with 8192-tiles (the largest) in last 1000 games
@@ -765,10 +756,10 @@ public:
 			for (int i = 0; i < 16; i++) {
 				stat[i] = std::count(maxtile.begin(), maxtile.end(), i);
 			}
-			float mean = float(sum) / unit;
+			float avg = float(sum) / unit;
 			float coef = 100.0 / unit;
 			info << n;
-			info << "\t" "mean = " << mean;
+			info << "\t" "avg = " << avg;
 			info << "\t" "max = " << max;
 			info << std::endl;
 			for (int t = 1, c = 0; c < unit; c += stat[t++]) {
@@ -862,25 +853,25 @@ int main(int argc, const char* argv[]) {
 	tdl.load("");
 
 	// train the model
-	std::vector<state> path;
+	std::vector<move> path;
 	path.reserve(20000);
 	for (size_t n = 1; n <= total; n++) {
-		board b;
+		board state;
 		int score = 0;
 
 		// play an episode
 		debug << "begin episode" << std::endl;
-		b.init();
+		state.init();
 		while (true) {
-			debug << "state" << std::endl << b;
-			state best = tdl.select_best_move(b);
+			debug << "state" << std::endl << state;
+			move best = tdl.select_best_move(state);
 			path.push_back(best);
 
 			if (best.is_valid()) {
 				debug << "best " << best;
 				score += best.reward();
-				b = best.after_state();
-				b.popup();
+				state = best.afterstate();
+				state.popup();
 			} else {
 				break;
 			}
@@ -888,8 +879,8 @@ int main(int argc, const char* argv[]) {
 		debug << "end episode" << std::endl;
 
 		// update by TD(0)
-		tdl.update_episode(path, alpha);
-		tdl.make_statistic(n, b, score);
+		tdl.learn_from_episode(path, alpha);
+		tdl.make_statistic(n, state, score);
 		path.clear();
 	}
 
