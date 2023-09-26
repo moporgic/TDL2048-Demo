@@ -22,6 +22,7 @@
 #include <cmath>
 #include <functional>
 #include <numeric>
+#include <limits>
 
 class board {
 public:
