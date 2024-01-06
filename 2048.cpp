@@ -26,10 +26,12 @@
 #include <sstream>
 #include <fstream>
 #include <cmath>
+#include <cstdint>
 
 /**
  * output streams
  * to enable debugging (more output), just change the line to 'std::ostream& debug = std::cout;'
+ * to disable debugging completely (will speed up training), comment out all debug output, i.e., // debug << XXX
  */
 std::ostream& info = std::cout;
 std::ostream& error = std::cerr;
