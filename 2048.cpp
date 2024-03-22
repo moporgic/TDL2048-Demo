@@ -462,6 +462,7 @@ public:
 		}
 	}
 	pattern(const pattern& p) = delete;
+	pattern(pattern&& p) : feature(std::move(p)), isom(std::move(p.isom)) {}
 	virtual ~pattern() {}
 	pattern& operator =(const pattern& p) = delete;
 
@@ -626,15 +627,17 @@ private:
 class learning {
 public:
 	learning() {}
-	~learning() {}
+	~learning() {
+		for (feature* feat : feats) delete feat;
+		feats.clear();
+	}
 
 	/**
 	 * add a feature into tuple networks
-	 *
-	 * note that feats is std::vector<feature*>,
-	 * therefore you need to keep all the instances somewhere
 	 */
-	void add_feature(feature* feat) {
+	template<typename feature_t>
+	void add_feature(feature_t&& f) {
+		feature_t* feat = new feature_t(std::move(f));
 		feats.push_back(feat);
 
 		info << feat->name() << ", size = " << feat->size();
@@ -843,10 +846,10 @@ int main(int argc, const char* argv[]) {
 	std::srand(seed);
 
 	// initialize the features of the 4x6-tuple network
-	tdl.add_feature(new pattern({ 0, 1, 2, 3, 4, 5 }));
-	tdl.add_feature(new pattern({ 4, 5, 6, 7, 8, 9 }));
-	tdl.add_feature(new pattern({ 0, 1, 2, 4, 5, 6 }));
-	tdl.add_feature(new pattern({ 4, 5, 6, 8, 9, 10 }));
+	tdl.add_feature(pattern({ 0, 1, 2, 3, 4, 5 }));
+	tdl.add_feature(pattern({ 4, 5, 6, 7, 8, 9 }));
+	tdl.add_feature(pattern({ 0, 1, 2, 4, 5, 6 }));
+	tdl.add_feature(pattern({ 4, 5, 6, 8, 9, 10 }));
 
 	// restore the model from file
 	tdl.load("");
