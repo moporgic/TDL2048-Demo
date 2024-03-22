@@ -422,7 +422,7 @@ protected:
  */
 class pattern : public feature {
 public:
-	pattern(const std::vector<int>& p, int iso = 8) : feature(1 << (p.size() * 4)), isom_last(iso) {
+	pattern(const std::vector<int>& p, int iso = 8) : feature(1 << (p.size() * 4)) {
 		if (p.empty()) {
 			error << "no pattern defined" << std::endl;
 			std::exit(1);
@@ -446,12 +446,13 @@ public:
 		 * therefore if we make a board whose value is 0xfedcba9876543210ull (the same as index)
 		 * we would be able to use the above method to calculate its 8 isomorphisms
 		 *
-		 * isom_last sets the isomorphic level of this pattern
+		 * iso sets the isomorphic level of this pattern
 		 * 1: no isomorphic
 		 * 4: enable rotation
 		 * 8: enable rotation and reflection
 		 */
-		for (int i = 0; i < 8; i++) {
+		isom.resize(iso);
+		for (int i = 0; i < iso; i++) {
 			board idx = 0xfedcba9876543210ull;
 			if (i >= 4) idx.mirror();
 			idx.rotate(i);
@@ -471,8 +472,8 @@ public:
 	 */
 	virtual float estimate(const board& b) const {
 		float value = 0;
-		for (int i = 0; i < isom_last; i++) {
-			size_t index = indexof(isom[i], b);
+		for (const auto& iso : isom) {
+			size_t index = indexof(iso, b);
 			value += operator[](index);
 		}
 		return value;
@@ -482,10 +483,10 @@ public:
 	 * update the value of a given board, and return its updated value
 	 */
 	virtual float update(const board& b, float u) {
-		float adjust = u / isom_last;
+		float adjust = u / isom.size();
 		float value = 0;
-		for (int i = 0; i < isom_last; i++) {
-			size_t index = indexof(isom[i], b);
+		for (const auto& iso : isom) {
+			size_t index = indexof(iso, b);
 			operator[](index) += adjust;
 			value += operator[](index);
 		}
@@ -505,13 +506,13 @@ public:
 	 * display the weight information of a given board
 	 */
 	void dump(const board& b, std::ostream& out = info) const {
-		for (int i = 0; i < isom_last; i++) {
-			out << "#" << i << ":" << nameof(isom[i]) << "(";
-			size_t index = indexof(isom[i], b);
-			for (size_t i = 0; i < isom[i].size(); i++) {
+		for (const auto& iso : isom) {
+			out << "#" << nameof(iso) << "[";
+			size_t index = indexof(iso, b);
+			for (size_t i = 0; i < iso.size(); i++) {
 				out << std::hex << ((index >> (4 * i)) & 0x0f);
 			}
-			out << std::dec << ") = " << operator[](index) << std::endl;
+			out << "] = " << std::dec << operator[](index) << std::endl;
 		}
 	}
 
@@ -531,8 +532,7 @@ protected:
 		return ss.str();
 	}
 
-	std::array<std::vector<int>, 8> isom;
-	int isom_last;
+	std::vector<std::vector<int>> isom;
 };
 
 /**
