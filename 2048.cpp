@@ -1,10 +1,12 @@
 /**
- * Temporal Difference Learning for Game 2048 (Demo)
- * use 'g++ -std=c++11 -O3 -g -o 2048 2048.cpp' to compile the source
+ * Temporal Difference Learning for the Game of 2048 (Demo)
  * https://github.com/moporgic/TDL2048-Demo
  *
- * Computer Games and Intelligence (CGI) Lab, NCTU, Taiwan
- * https://cgilab.nctu.edu.tw
+ * Computer Games and Intelligence (CGI) Lab, NYCU, Taiwan
+ * https://cgi.lab.nycu.edu.tw
+ *
+ * Reinforcement Learning and Games Lab, IIS, Academia Sinica, Taiwan
+ * https://rlg.iis.sinica.edu.tw
  *
  * References:
  * [1] Szubert, Marcin and Wojciech Jaśkowski. "Temporal difference learning of n-tuple networks for the game 2048."
@@ -29,9 +31,9 @@
 #include <cstdint>
 
 /**
- * output streams
- * to enable debugging (more output), just change the line to 'std::ostream& debug = std::cout;'
- * to disable debugging completely (will speed up training), comment out all debug output, i.e., // debug << XXX
+ * default output streams
+ * to enable debugging, just change the line to 'std::ostream& debug = std::cout;'
+ * to disable debugging completely (will speed up training), comment out all debug output, i.e., // debug << ...
  */
 std::ostream& info = std::cout;
 std::ostream& error = std::cerr;
@@ -46,15 +48,14 @@ std::ostream& debug = *(new std::ofstream);
  *  8  9 10 11
  * 12 13 14 15
  *
- * note that the 64-bit value is little endian
- * therefore a board with raw value 0x4312752186532731ull would be
+ * note that the 64-bit raw value is stored in little endian
+ * i.e., 0x4312752186532731ull is displayed as
  * +------------------------+
  * |     2     8   128     4|
  * |     8    32    64   256|
  * |     2     4    32   128|
  * |     4     2     8    16|
  * +------------------------+
- *
  */
 class board {
 public:
@@ -90,7 +91,7 @@ public:
 
 private:
 	/**
-	 * the lookup table for moving board
+	 * the lookup table for sliding board
 	 */
 	struct lookup {
 		int raw; // base row (16-bit raw)
@@ -163,7 +164,7 @@ private:
 public:
 
 	/**
-	 * reset to initial state (2 random tile on board)
+	 * reset to initial state, i.e., witn only 2 random tiles on board
 	 */
 	void init() { raw = 0; popup(); popup(); }
 
@@ -184,7 +185,7 @@ public:
 
 	/**
 	 * apply an action to the board
-	 * return the reward gained by the action, or -1 if the action is illegal
+	 * return the reward of the action, or -1 if the action is illegal
 	 */
 	int move(int opcode) {
 		switch (opcode) {
@@ -232,7 +233,7 @@ public:
 	}
 
 	/**
-	 * swap row and column
+	 * swap rows and columns
 	 * +------------------------+       +------------------------+
 	 * |     2     8   128     4|       |     2     8     2     4|
 	 * |     8    32    64   256|       |     8    32     4     2|
@@ -246,7 +247,7 @@ public:
 	}
 
 	/**
-	 * horizontal reflection
+	 * reflect the board horizontally, i.e., exchange columns
 	 * +------------------------+       +------------------------+
 	 * |     2     8   128     4|       |     4   128     8     2|
 	 * |     8    32    64   256|       |   256    64    32     8|
@@ -260,7 +261,7 @@ public:
 	}
 
 	/**
-	 * vertical reflection
+	 * reflect the board vertically, i.e., exchange rows
 	 * +------------------------+       +------------------------+
 	 * |     2     8   128     4|       |     4     2     8    16|
 	 * |     8    32    64   256|       |     2     4    32   128|
@@ -312,7 +313,7 @@ private:
 };
 
 /**
- * feature and weight table for temporal difference learning
+ * feature and weight table for n-tuple networks
  */
 class feature {
 public:
@@ -416,9 +417,15 @@ protected:
  *  8  9 10 11
  * 12 13 14 15
  *
+ * isomorphic:
+ *  1: no isomorphic
+ *  4: enable rotation
+ *  8: enable rotation and reflection (default)
+ * 
  * usage:
  *  pattern({ 0, 1, 2, 3 })
  *  pattern({ 0, 1, 2, 3, 4, 5 })
+ *  pattern({ 0, 1, 2, 3, 4, 5 }, 4)
  */
 class pattern : public feature {
 public:
@@ -430,26 +437,22 @@ public:
 
 		/**
 		 * isomorphic patterns can be calculated by board
+		 * take isomorphic patterns { 0, 1, 2, 3 } and { 12, 8, 4, 0 } as example
 		 *
-		 * take pattern { 0, 1, 2, 3 } as an example
-		 * apply the pattern to the original board (left), we will get 0x1372
-		 * if we apply the pattern to the clockwise rotated board (right), we will get 0x2131,
-		 * which is the same as applying pattern { 12, 8, 4, 0 } to the original board
-		 * { 0, 1, 2, 3 } and { 12, 8, 4, 0 } are isomorphic patterns
 		 * +------------------------+       +------------------------+
 		 * |     2     8   128     4|       |     4     2     8     2|
 		 * |     8    32    64   256|       |     2     4    32     8|
 		 * |     2     4    32   128| ----> |     8    32    64   128|
 		 * |     4     2     8    16|       |    16   128   256     4|
 		 * +------------------------+       +------------------------+
+		 * the left side is an original board and the right side is its clockwise rotation
+		 * 
+		 * apply { 0, 1, 2, 3 } to the original board will extract 0x2731
+		 * apply { 0, 1, 2, 3 } to the clockwise rotated board will extract 0x1312,
+		 * which is the same as applying { 12, 8, 4, 0 } to the original board
 		 *
-		 * therefore if we make a board whose value is 0xfedcba9876543210ull (the same as index)
-		 * we would be able to use the above method to calculate its 8 isomorphisms
-		 *
-		 * iso sets the isomorphic level of this pattern
-		 * 1: no isomorphic
-		 * 4: enable rotation
-		 * 8: enable rotation and reflection
+		 * therefore the 8 isomorphic patterns can be calculated by 
+		 * using a board whose value is 0xfedcba9876543210ull as follows
 		 */
 		isom.resize(iso);
 		for (int i = 0; i < iso; i++) {
@@ -537,7 +540,8 @@ protected:
 };
 
 /**
- * the move for storing state, action, reward, afterstate, and value
+ * the data structure for the move
+ * store state, action, reward, afterstate, and value
  */
 class move {
 public:
@@ -588,7 +592,7 @@ public:
 	/**
 	 * check the move is valid or not
 	 *
-	 * the move is invalid if
+	 * the move is considered invalid if
 	 *  estimated value becomes to NaN (wrong learning rate?)
 	 *  invalid action (cause after == before or score == -1)
 	 *
@@ -788,7 +792,7 @@ public:
 
 	/**
 	 * load the weight table from binary file
-	 * you need to define all the features (add_feature(...)) before call this function
+	 * the required features must be added, i.e., add_feature(...), before calling this function
 	 */
 	void load(const std::string& path) {
 		std::ifstream in;
