@@ -219,15 +219,15 @@ public:
 		return (move != prev) ? score : -1;
 	}
 	int move_up() {
-		rotate_right();
+		rotate_clockwise();
 		int score = move_right();
-		rotate_left();
+		rotate_counterclockwise();
 		return score;
 	}
 	int move_down() {
-		rotate_right();
+		rotate_clockwise();
 		int score = move_left();
-		rotate_left();
+		rotate_counterclockwise();
 		return score;
 	}
 
@@ -280,19 +280,19 @@ public:
 		switch (((r % 4) + 4) % 4) {
 		default:
 		case 0: break;
-		case 1: rotate_right(); break;
+		case 1: rotate_clockwise(); break;
 		case 2: reverse(); break;
-		case 3: rotate_left(); break;
+		case 3: rotate_counterclockwise(); break;
 		}
 	}
 
-	void rotate_right() { transpose(); mirror(); } // clockwise
-	void rotate_left() { transpose(); flip(); } // counterclockwise
+	void rotate_clockwise() { transpose(); mirror(); }
+	void rotate_counterclockwise() { transpose(); flip(); }
 	void reverse() { mirror(); flip(); }
 
 public:
 
-    friend std::ostream& operator <<(std::ostream& out, const board& b) {
+	friend std::ostream& operator <<(std::ostream& out, const board& b) {
 		char buff[32];
 		out << "+------------------------+" << std::endl;
 		for (int i = 0; i < 16; i += 4) {
@@ -564,14 +564,11 @@ public:
 	bool operator ==(const move& s) const {
 		return (opcode == s.opcode) && (before == s.before) && (after == s.after) && (esti == s.esti) && (score == s.score);
 	}
-	bool operator < (const move& s) const {
-		if (before != s.before) throw std::invalid_argument("state::operator<");
-		return esti < s.esti;
-	}
+	bool operator < (const move& s) const { return before == s.before && esti < s.esti; }
 	bool operator !=(const move& s) const { return !(*this == s); }
 	bool operator > (const move& s) const { return s < *this; }
-	bool operator <=(const move& s) const { return !(s < *this); }
-	bool operator >=(const move& s) const { return !(*this < s); }
+	bool operator <=(const move& s) const { return (*this < s) || (*this == s); }
+	bool operator >=(const move& s) const { return (*this > s) || (*this == s); }
 
 public:
 
@@ -609,7 +606,7 @@ public:
 		return (opcode >= 0 && opcode < 4) ? opname[opcode] : "none";
 	}
 
-    friend std::ostream& operator <<(std::ostream& out, const move& mv) {
+	friend std::ostream& operator <<(std::ostream& out, const move& mv) {
 		out << "moving " << mv.name() << ", reward = " << mv.score;
 		if (mv.is_valid()) {
 			out << ", value = " << mv.esti << std::endl << mv.after;
@@ -668,7 +665,7 @@ public:
 	/**
 	 * update the value of the given state and return its new value
 	 */
-	float update(const board& b, float u) const {
+	float update(const board& b, float u) {
 		debug << "update " << " (" << u << ")" << std::endl << b;
 		float adjust = u / feats.size();
 		float value = 0;
@@ -711,7 +708,7 @@ public:
 	 *  { (s0,s0',a0,r0), (s1,s1',a1,r1), (s2,x,x,x) }
 	 *  note that the last record contains only a terminal state
 	 */
-	void learn_from_episode(std::vector<move>& path, float alpha = 0.1) const {
+	void learn_from_episode(std::vector<move>& path, float alpha = 0.1) {
 		float target = 0;
 		for (path.pop_back() /* terminal state */; path.size(); path.pop_back()) {
 			move& move = path.back();
