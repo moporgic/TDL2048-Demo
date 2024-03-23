@@ -35,11 +35,9 @@ def error(*argv):
 def debug(*argv):
     """
     default debug output
-    to enable debugging, just, just uncomment the below line
-    to disable debugging completely (may speed up training), comment out all debug output, i.e., # debug(...)
+    to enable debugging, uncomment the debug output lines below, i.e., debug(...)
     """
-    # print(*argv, file=sys.stderr)
-    pass
+    print(*argv, file=sys.stderr)
 
 
 class board:
@@ -554,7 +552,7 @@ class move:
         assign a state, then apply the action to generate its afterstate
         return true if the action is valid for the given state
         """
-        debug(f"assign {self.name()}\n{b}")
+        # debug(f"assign {self.name()}\n{b}")
         self.after = board(b)
         self.before = board(b)
         self.score = self.after.move(self.opcode)
@@ -615,14 +613,14 @@ class learning:
         estimate the value of the given state
         by accumulating all corresponding feature weights
         """
-        debug(f"estimate {b}")
+        # debug(f"estimate {b}")
         return sum(feat.estimate(b) for feat in self.feats)
 
     def update(self, b, u):
         """
         update the value of the given state and return its new value
         """
-        debug(f"update ({u})\n{b}")
+        # debug(f"update ({u})\n{b}")
         adjust = u / len(self.feats)
         return sum(feat.update(b, adjust) for feat in self.feats)
 
@@ -644,7 +642,7 @@ class learning:
                 mv.set_value(mv.reward() + self.estimate(mv.afterstate()))
                 if mv.value() > best.value():
                     best = mv
-            debug("test", mv)
+            # debug("test", mv)
         return best
 
     def learn_from_episode(self, path, alpha=0.1):
@@ -664,7 +662,7 @@ class learning:
             move = path.pop()
             error = target - self.estimate(move.afterstate())
             target = move.reward() + self.update(move.afterstate(), alpha * error)
-            debug(f"update error = {error} for\n{move.afterstate()}")
+            # debug(f"update error = {error} for\n{move.afterstate()}")
 
     def make_statistic(self, n, b, score, unit=1000):
         """
@@ -782,21 +780,21 @@ if __name__ == "__main__":
         score = 0
 
         # play an episode
-        debug("begin episode")
+        # debug("begin episode")
         state.init()
         while True:
-            debug(f"state\n{state}")
+            # debug(f"state\n{state}")
             best = tdl.select_best_move(state)
             path.append(best)
 
             if best.is_valid():
-                debug("best", best)
+                # debug("best", best)
                 score += best.reward()
                 state = board(best.afterstate())
                 state.popup()
             else:
                 break
-        debug("end episode")
+        # debug("end episode")
 
         # update by TD(0)
         tdl.learn_from_episode(path, alpha)

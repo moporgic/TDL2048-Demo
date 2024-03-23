@@ -29,12 +29,11 @@
 
 /**
  * default output streams
- * to enable debugging, just change the line to 'std::ostream& debug = std::cout;'
- * to disable debugging completely (will speed up training), comment out all debug output, i.e., // debug << ...
+ * to enable debugging, uncomment the debug output lines below, i.e., debug << ...
  */
 std::ostream& info = std::cout;
 std::ostream& error = std::cerr;
-std::ostream& debug = *(new std::ofstream);
+std::ostream& debug = std::cerr;
 
 /**
  * 64-bit bitboard implementation for 2048
@@ -579,7 +578,7 @@ public:
 	 * return true if the action is valid for the given state
 	 */
 	bool assign(const board& b) {
-		debug << "assign " << name() << std::endl << b;
+		// debug << "assign " << name() << std::endl << b;
 		after = before = b;
 		score = after.move(opcode);
 		esti = score != -1 ? score : -std::numeric_limits<float>::max();
@@ -658,7 +657,7 @@ public:
 	 * by accumulating all corresponding feature weights
 	 */
 	float estimate(const board& b) const {
-		debug << "estimate " << std::endl << b;
+		// debug << "estimate " << std::endl << b;
 		float value = 0;
 		for (feature* feat : feats) {
 			value += feat->estimate(b);
@@ -670,7 +669,7 @@ public:
 	 * update the value of the given state and return its new value
 	 */
 	float update(const board& b, float u) {
-		debug << "update " << " (" << u << ")" << std::endl << b;
+		// debug << "update " << " (" << u << ")" << std::endl << b;
 		float adjust = u / feats.size();
 		float value = 0;
 		for (feature* feat : feats) {
@@ -697,7 +696,7 @@ public:
 				move.set_value(move.reward() + estimate(move.afterstate()));
 				if (move.value() > best.value()) best = move;
 			}
-			debug << "test " << move;
+			// debug << "test " << move;
 		}
 		return best;
 	}
@@ -718,7 +717,7 @@ public:
 			move& move = path.back();
 			float error = target - estimate(move.afterstate());
 			target = move.reward() + update(move.afterstate(), alpha * error);
-			debug << "update error = " << error << " for" << std::endl << move.afterstate();
+			// debug << "update error = " << error << " for" << std::endl << move.afterstate();
 		}
 	}
 
@@ -864,15 +863,15 @@ int main(int argc, const char* argv[]) {
 		int score = 0;
 
 		// play an episode
-		debug << "begin episode" << std::endl;
+		// debug << "begin episode" << std::endl;
 		state.init();
 		while (true) {
-			debug << "state" << std::endl << state;
+			// debug << "state" << std::endl << state;
 			move best = tdl.select_best_move(state);
 			path.push_back(best);
 
 			if (best.is_valid()) {
-				debug << "best " << best;
+				// debug << "best " << best;
 				score += best.reward();
 				state = best.afterstate();
 				state.popup();
@@ -880,7 +879,7 @@ int main(int argc, const char* argv[]) {
 				break;
 			}
 		}
-		debug << "end episode" << std::endl;
+		// debug << "end episode" << std::endl;
 
 		// update by TD(0)
 		tdl.learn_from_episode(path, alpha);
