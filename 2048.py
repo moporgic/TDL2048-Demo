@@ -5,16 +5,16 @@ https://github.com/moporgic/TDL2048-Demo
 Computer Games and Intelligence (CGI) Lab, NYCU, Taiwan
 https://cgi.lab.nycu.edu.tw
 
-Reinforcement Learning and Games Lab, IIS, Academia Sinica, Taiwan
+Reinforcement Learning and Games (RLG) Lab, IIS, Academia Sinica, Taiwan
 https://rlg.iis.sinica.edu.tw
 
 References:
-[1] Szubert, Marcin and Wojciech Jaśkowski. "Temporal difference learning of n-tuple networks for the game 2048."
-    Computational Intelligence and Games (CIG), 2014 IEEE Conference on. IEEE, 2014.
-[2] Wu, I-Chen, et al. "Multi-stage temporal difference learning for 2048."
-    Technologies and Applications of Artificial Intelligence. Springer International Publishing, 2014. 366-378.
-[3] Oka, Kazuto and Kiminori Matsuzaki. "Systematic selection of n-tuple networks for 2048."
-    International Conference on Computers and Games. Springer International Publishing, 2016.
+[1] M. Szubert and W. Jaśkowski, "Temporal difference learning of N-tuple networks for the game 2048,"
+    IEEE Conference on Computational Intelligence and Games (CIG), 2014.
+[2] I-C. Wu, K.-H. Yeh, C.-C. Liang, C.-C. Chang, and H. Chiang, "Multi-stage temporal difference learning for 2048,"
+    Conference on Technologies and Applications of Artificial Intelligence (TAAI), 2014.
+[3] K. Matsuzaki, "Systematic selection of N-tuple networks with consideration of interinfluence for game 2048,"
+    Conference on Technologies and Applications of Artificial Intelligence (TAAI), 2016.
 """
 import sys
 import math

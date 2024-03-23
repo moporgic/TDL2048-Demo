@@ -5,16 +5,16 @@
  * Computer Games and Intelligence (CGI) Lab, NYCU, Taiwan
  * https://cgi.lab.nycu.edu.tw
  *
- * Reinforcement Learning and Games Lab, IIS, Academia Sinica, Taiwan
+ * Reinforcement Learning and Games (RLG) Lab, IIS, Academia Sinica, Taiwan
  * https://rlg.iis.sinica.edu.tw
  *
  * References:
- * [1] Szubert, Marcin and Wojciech Jaśkowski. "Temporal difference learning of n-tuple networks for the game 2048."
- *     Computational Intelligence and Games (CIG), 2014 IEEE Conference on. IEEE, 2014.
- * [2] Wu, I-Chen, et al. "Multi-stage temporal difference learning for 2048."
- *     Technologies and Applications of Artificial Intelligence. Springer International Publishing, 2014. 366-378.
- * [3] Oka, Kazuto and Kiminori Matsuzaki. "Systematic selection of n-tuple networks for 2048."
- *     International Conference on Computers and Games. Springer International Publishing, 2016.
+ * [1] M. Szubert and W. Jaśkowski, "Temporal difference learning of N-tuple networks for the game 2048,"
+ *     IEEE Conference on Computational Intelligence and Games (CIG), 2014.
+ * [2] I-C. Wu, K.-H. Yeh, C.-C. Liang, C.-C. Chang, and H. Chiang, "Multi-stage temporal difference learning for 2048,"
+ *     Conference on Technologies and Applications of Artificial Intelligence (TAAI), 2014.
+ * [3] K. Matsuzaki, "Systematic selection of N-tuple networks with consideration of interinfluence for game 2048,"
+ *     Conference on Technologies and Applications of Artificial Intelligence (TAAI), 2016.
  */
 #include <iostream>
 #include <algorithm>
@@ -421,7 +421,7 @@ protected:
  *  1: no isomorphic
  *  4: enable rotation
  *  8: enable rotation and reflection (default)
- * 
+ *
  * usage:
  *  pattern({ 0, 1, 2, 3 })
  *  pattern({ 0, 1, 2, 3, 4, 5 })
@@ -446,12 +446,12 @@ public:
 		 * |     4     2     8    16|       |    16   128   256     4|
 		 * +------------------------+       +------------------------+
 		 * the left side is an original board and the right side is its clockwise rotation
-		 * 
+		 *
 		 * apply { 0, 1, 2, 3 } to the original board will extract 0x2731
 		 * apply { 0, 1, 2, 3 } to the clockwise rotated board will extract 0x1312,
 		 * which is the same as applying { 12, 8, 4, 0 } to the original board
 		 *
-		 * therefore the 8 isomorphic patterns can be calculated by 
+		 * therefore the 8 isomorphic patterns can be calculated by
 		 * using a board whose value is 0xfedcba9876543210ull as follows
 		 */
 		isom.resize(iso);
