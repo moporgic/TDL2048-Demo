@@ -728,21 +728,22 @@ public:
 	/**
 	 * update the statistic, and show the statistic every 1000 episodes by default
 	 *
-	 * the format is
-	 * 1000   avg = 273901  max = 382324
-	 *        512     100%   (0.3%)
-	 *        1024    99.7%  (0.2%)
-	 *        2048    99.5%  (1.1%)
-	 *        4096    98.4%  (4.7%)
-	 *        8192    93.7%  (22.4%)
-	 *        16384   71.3%  (71.3%)
+	 * the statistic contains average, maximum scores, and tile distributions, e.g.,
 	 *
-	 * where (when unit = 1000)
-	 *  '1000': current iteration (games trained)
-	 *  'avg = 273901': the average score of last 1000 games is 273901
-	 *  'max = 382324': the maximum score of last 1000 games is 382324
-	 *  '93.7%': 93.7% (937 games) reached 8192-tiles in last 1000 games, i.e., win rate of 8192-tile
-	 *  '22.4%': 22.4% (224 games) terminated with 8192-tiles (the largest) in last 1000 games
+	 * 100000  avg = 68663.7   max = 177508
+	 *         256     100%    (0.2%)
+	 *         512     99.8%   (0.9%)
+	 *         1024    98.9%   (7.7%)
+	 *         2048    91.2%   (22.5%)
+	 *         4096    68.7%   (53.9%)
+	 *         8192    14.8%   (14.8%)
+	 *
+	 * is the statistic from the 99001th to the 100000th games (assuming unit = 1000), where
+	 *  '100000': current iteration, i.e., number of games trained
+	 *  'avg = 68663.7  max = 177508': the average score is 68663.7
+	 *                                 the maximum score is 177508
+	 *  '2048 91.2% (22.5%)': 91.2% of games reached 2048-tiles, i.e., win rate of 2048-tile
+	 *                        22.5% of games terminated with 2048-tiles (the largest tile)
 	 */
 	void make_statistic(size_t n, const board& b, int score, int unit = 1000) {
 		scores.push_back(score);
