@@ -1,41 +1,13 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
-*.o
-*.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
-*.exe
-*.out
-*.app
+# Executables and binaries
 2048
 2048.exe
+*.bin
 
-# Folders and settings
-/Default
-/Debug
-/Release
-/.settings
-/.*project
+# Folders and IDE settings
+Default
+Debug
+Release
+.settings
+.*project
+.vscode
+__pycache__

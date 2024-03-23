@@ -662,8 +662,7 @@ class learning:
          note that the last record contains only a terminal state
         """
         target = 0
-        if path:
-            path.pop() # terminal state
+        path.pop() # terminal state
         while path:
             move = path.pop()
             error = target - self.estimate(move.afterstate())
@@ -723,7 +722,7 @@ class learning:
         """
         out(f"{b}\nestimate = {self.estimate(b)}")
         for feat in self.feats:
-            feat.dump(b)
+            feat.dump(b, out=out)
 
     def load(self, path):
         """
@@ -761,11 +760,11 @@ if __name__ == "__main__":
     tdl = learning()
 
     # set the learning parameters
-    alpha = 0.1
     total = 100000
+    alpha = 0.1
     seed = 0
-    info(f"alpha = {alpha}")
     info(f"total = {total}")
+    info(f"alpha = {alpha}")
     info(f"seed = {seed}")
     random.seed(seed)
 
@@ -776,7 +775,7 @@ if __name__ == "__main__":
     tdl.add_feature(pattern([ 4, 5, 6, 8, 9, 10 ]))
 
     # restore the model from file
-    tdl.load("")
+    tdl.load("2048.bin")
 
     # train the model
     for n in range(1, total + 1):
@@ -806,4 +805,4 @@ if __name__ == "__main__":
         tdl.make_statistic(n, state, score)
 
     # store the model into file
-    tdl.save("")
+    tdl.save("2048.bin")

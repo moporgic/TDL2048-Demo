@@ -841,11 +841,11 @@ int main(int argc, const char* argv[]) {
 	learning tdl;
 
 	// set the learning parameters
-	float alpha = 0.1;
 	size_t total = 100000;
+	float alpha = 0.1;
 	unsigned seed = 0;
-	info << "alpha = " << alpha << std::endl;
 	info << "total = " << total << std::endl;
+	info << "alpha = " << alpha << std::endl;
 	info << "seed = " << seed << std::endl;
 	std::srand(seed);
 
@@ -856,7 +856,7 @@ int main(int argc, const char* argv[]) {
 	tdl.add_feature(pattern({ 4, 5, 6, 8, 9, 10 }));
 
 	// restore the model from file
-	tdl.load("");
+	tdl.load("2048.bin");
 
 	// train the model
 	std::vector<move> path;
@@ -891,7 +891,7 @@ int main(int argc, const char* argv[]) {
 	}
 
 	// store the model into file
-	tdl.save("");
+	tdl.save("2048.bin");
 
 	return 0;
 }
