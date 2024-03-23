@@ -2,7 +2,7 @@
 
 ***Temporal Difference Learning for the Game of 2048 (Demo)***
 
-[TDL2048-Demo](https://github.com/moporgic/TDL2048-Demo) is a foundational framework designed to explore *temporal difference (TD) learning* in the game of *2048*, which is built around the core principles of the *TD(0)* algorithm, incorporating an *n-tuple network* architecture that utilizes isomorphic features. Additionally, a *bitboard* representation is employed to manage game states and operations efficiently.
+[TDL2048-Demo](https://github.com/moporgic/TDL2048-Demo) is a foundational framework designed to explore *temporal difference (TD) learning* in the game of *2048*, which is built around the core principles of the *TD(0)* algorithm, incorporating an *n-tuple network* architecture that utilizes isomorphic features, and employing a *bitboard* representation to manage game states and operations efficiently.
 
 The demo is intended for beginners and enthusiasts looking to dive into reinforcement learning within the context of computer games. Whether you're aiming to understand TD learning mechanics, experiment with n-tuple networks, or investigate game AI strategies for 2048, TDL2048-Demo offers a solid starting point.
 
@@ -25,7 +25,7 @@ python 2048.py
 ```
 
 The program prints the statistics every 1000 games, which include average score, maximum score, and tile distribution.
-The example below is the statistics from the 99001th to the 100000th games.
+The example below is the statistics from the 99001st to the 100000th games.
 ```
 100000  avg = 68663.7   max = 177508
         256     100%    (0.2%)
@@ -38,8 +38,8 @@ The example below is the statistics from the 99001th to the 100000th games.
 - `100000`: the current iteration, i.e., number of games trained.
 - `avg = 68663.7  max = 177508`: the average score is 68663.7;
                                  the maximum score is 177508.
-- `2048  91.2%  (22.5%)`: 91.2% of games reached 2048-tiles, i.e., win rate of 2048-tile;
-                          22.5% of games terminated with 2048-tiles (the largest tile).
+- `2048  91.2%  (22.5%)`: 91.2% of games reached 2048-tiles, i.e., the win rate of 2048-tile;
+                          22.5% of games terminated when 2048-tiles were the largest tile.
 
 ## Collaborating Institutions
 
