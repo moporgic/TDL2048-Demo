@@ -9,12 +9,9 @@
  * https://rlg.iis.sinica.edu.tw
  *
  * References:
- * [1] M. Szubert and W. Jaśkowski, "Temporal difference learning of N-tuple networks for the game 2048,"
- *     IEEE Conference on Computational Intelligence and Games (CIG), 2014.
- * [2] I-C. Wu, K.-H. Yeh, C.-C. Liang, C.-C. Chang, and H. Chiang, "Multi-stage temporal difference learning for 2048,"
- *     Conference on Technologies and Applications of Artificial Intelligence (TAAI), 2014.
- * [3] K. Matsuzaki, "Systematic selection of N-tuple networks with consideration of interinfluence for game 2048,"
- *     Conference on Technologies and Applications of Artificial Intelligence (TAAI), 2016.
+ * [1] M. Szubert and W. Jaśkowski, "Temporal difference learning of N-tuple networks for the game 2048," CIG 2014.
+ * [2] I-C. Wu, K.-H. Yeh, C.-C. Liang, C.-C. Chang, and H. Chiang, "Multi-stage temporal difference learning for 2048," TAAI 2014.
+ * [3] K. Matsuzaki, "Systematic selection of N-tuple networks with consideration of interinfluence for game 2048," TAAI 2016.
  */
 #include <iostream>
 #include <algorithm>
@@ -738,7 +735,7 @@ public:
 	 *         4096    68.7%   (53.9%)
 	 *         8192    14.8%   (14.8%)
 	 *
-	 * is the statistic from the 99001th to the 100000th games (assuming unit = 1000), where
+	 * is the statistic from the 99001st to the 100000th games (assuming unit = 1000), where
 	 *  '100000': current iteration, i.e., number of games trained
 	 *  'avg = 68663.7  max = 177508': the average score is 68663.7
 	 *                                 the maximum score is 177508
